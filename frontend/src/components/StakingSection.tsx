@@ -1,0 +1,472 @@
+import { useState, useEffect, useRef } from 'react';
+import { Contract } from 'ethers';
+import { useWeb3 } from '../hooks/useWeb3';
+import { useNotification } from '../contexts/NotificationContext';
+import { CONTRACTS } from '../config/contracts';
+import { parseAmount, formatBalance } from '../utils/format';
+import { cache } from '../utils/cache';
+
+interface Stake {
+  amount: bigint;
+  lockUntil: bigint;
+  points: bigint;
+  createdAt: bigint;
+  active: boolean;
+}
+
+interface PUSDStake {
+  amount: bigint;
+  lockUntil: bigint;
+  points: bigint;
+  createdAt: bigint;
+  active: boolean;
+}
+
+const loadWithTimeout = <T,>(promise: Promise<T>, timeout: number): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout')), timeout)
+    )
+  ]);
+};
+
+export default function StakingSection() {
+  const { signer, account, isConnected } = useWeb3();
+  const { showNotification } = useNotification();
+  const [polAmount, setPolAmount] = useState('');
+  const [lockDays, setLockDays] = useState('30');
+  const [stakes, setStakes] = useState<Stake[]>([]);
+  const [pusdStakes, setPusdStakes] = useState<PUSDStake[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingStakes, setLoadingStakes] = useState(true);
+  const [showStakesList, setShowStakesList] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [claimableRewards, setClaimableRewards] = useState<string>('0');
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setStakes([]);
+    setPusdStakes([]);
+    setLoadingStakes(true);
+    
+    if (!signer || !account) {
+      setLoadingStakes(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      const loadStakes = async () => {
+        try {
+          const cacheKey = `stakes-${account}`;
+          const pusdCacheKey = `pusd-stakes-${account}`;
+          const cached = cache.get<Stake[]>(cacheKey);
+          const cachedPusd = cache.get<PUSDStake[]>(pusdCacheKey);
+          if (cached && cachedPusd && mountedRef.current) {
+            setStakes(cached);
+            setPusdStakes(cachedPusd);
+            setLoadingStakes(false);
+          }
+
+          const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+          const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, signer);
+          
+          const [userStakes, userPusdStakes, claimable] = await Promise.allSettled([
+            loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+            loadWithTimeout(stakingContract.getUserActivePUSDStakes(account), 5000).catch(() => []),
+            loadWithTimeout(rewardContract.getClaimableRewards(account), 5000).catch(() => 0n),
+          ]);
+          
+          if (mountedRef.current) {
+            setStakes(userStakes.status === 'fulfilled' ? userStakes.value : []);
+            setPusdStakes(userPusdStakes.status === 'fulfilled' ? userPusdStakes.value : []);
+            setClaimableRewards(claimable.status === 'fulfilled' && claimable.value ? formatBalance(claimable.value) : '0');
+            if (userStakes.status === 'fulfilled') {
+              cache.set(cacheKey, userStakes.value, 120000);
+            }
+            if (userPusdStakes.status === 'fulfilled') {
+              cache.set(pusdCacheKey, userPusdStakes.value, 120000);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load stakes:', error);
+          if (mountedRef.current) {
+            setStakes([]);
+            setPusdStakes([]);
+          }
+        } finally {
+          if (mountedRef.current) {
+            setLoadingStakes(false);
+          }
+        }
+      };
+
+      loadStakes();
+    }, 300);
+
+    const interval = setInterval(() => {
+      if (signer && account && mountedRef.current) {
+        (async () => {
+          try {
+            const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+            const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, signer);
+            
+            const [userStakes, userPusdStakes, claimable] = await Promise.allSettled([
+              loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+              loadWithTimeout(stakingContract.getUserActivePUSDStakes(account), 5000).catch(() => []),
+              loadWithTimeout(rewardContract.getClaimableRewards(account), 5000).catch(() => 0n),
+            ]);
+            
+            if (mountedRef.current) {
+              if (userStakes.status === 'fulfilled') {
+                setStakes(userStakes.value);
+                cache.set(`stakes-${account}`, userStakes.value, 30000);
+              }
+              if (userPusdStakes.status === 'fulfilled') {
+                setPusdStakes(userPusdStakes.value);
+                cache.set(`pusd-stakes-${account}`, userPusdStakes.value, 30000);
+              }
+              if (claimable.status === 'fulfilled' && claimable.value) {
+                setClaimableRewards(formatBalance(claimable.value));
+              }
+            }
+          } catch (error) {
+            console.error('Failed to refresh stakes:', error);
+          }
+        })();
+      }
+    }, 30000);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(interval);
+    };
+  }, [signer, account]);
+
+  const handleStake = async () => {
+    if (!signer || !polAmount || parseFloat(polAmount) <= 0) return;
+    if (parseInt(lockDays) < 30) {
+      showNotification('Lock period must be at least 30 days', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+      const polWei = parseAmount(polAmount);
+      const tx = await stakingContract.stake(parseInt(lockDays), { value: polWei });
+      await tx.wait();
+      showNotification('Stake successful!', 'success');
+      setPolAmount('');
+      cache.delete(`stakes-${account}`);
+      const updatedStakes = await stakingContract.getUserActiveStakes(account);
+      if (mountedRef.current) {
+        setStakes(updatedStakes);
+      }
+    } catch (error: any) {
+      console.error('Stake failed:', error);
+      showNotification(error?.reason || 'Stake failed', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnstake = async (stakeId: number) => {
+    if (!signer || !account) return;
+
+    setLoading(true);
+    try {
+      const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+      const tx = await stakingContract.unstake(stakeId);
+      await tx.wait();
+      showNotification('Unstake successful!', 'success');
+      cache.delete(`stakes-${account}`);
+      const updatedStakes = await stakingContract.getUserActiveStakes(account);
+      if (mountedRef.current) {
+        setStakes(updatedStakes);
+      }
+    } catch (error: any) {
+      console.error('Unstake failed:', error);
+      showNotification(error?.reason || 'Unstake failed', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnstakePUSD = async (stakeId: number) => {
+    if (!signer || !account) return;
+
+    setLoading(true);
+    try {
+      const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+      const tx = await stakingContract.unstakePUSD(stakeId);
+      await tx.wait();
+      showNotification('Unstake PUSD successful!', 'success');
+      cache.delete(`pusd-stakes-${account}`);
+      const updatedStakes = await stakingContract.getUserActivePUSDStakes(account);
+      if (mountedRef.current) {
+        setPusdStakes(updatedStakes);
+      }
+    } catch (error: any) {
+      console.error('Unstake PUSD failed:', error);
+      showNotification(error?.reason || 'Unstake PUSD failed', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClaimRewards = async () => {
+    if (!signer || !account) return;
+    if (parseFloat(claimableRewards) <= 0) {
+      showNotification('No rewards to claim', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, signer);
+      const tx = await rewardContract.claimRewards();
+      await tx.wait();
+      showNotification('Rewards claimed successfully!', 'success');
+      setClaimableRewards('0');
+    } catch (error: any) {
+      console.error('Claim rewards failed:', error);
+      showNotification(error?.reason || 'Failed to claim rewards', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="section staking-section">
+      <h2 onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+        Stake POL {isExpanded ? '▼' : '▶'}
+      </h2>
+      {isExpanded && (
+        <>
+          {!isConnected ? (
+            <p>Please connect your wallet</p>
+          ) : (
+            <>
+          <div className="input-group">
+            <label>POL Amount</label>
+            <input
+              type="number"
+              value={polAmount}
+              onChange={(e) => setPolAmount(e.target.value)}
+              placeholder="0.0"
+              step="0.0001"
+              min="0"
+            />
+          </div>
+          <div className="input-group">
+            <label>Lock Days</label>
+            <div className="lock-days-selector">
+              <button
+                type="button"
+                onClick={() => setLockDays('30')}
+                className={lockDays === '30' ? 'active' : ''}
+              >
+                30 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setLockDays('60')}
+                className={lockDays === '60' ? 'active' : ''}
+              >
+                60 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setLockDays('120')}
+                className={lockDays === '120' ? 'active' : ''}
+              >
+                120 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setLockDays('365')}
+                className={lockDays === '365' ? 'active' : ''}
+              >
+                365 Days
+              </button>
+            </div>
+            <input
+              type="number"
+              value={lockDays}
+              onChange={(e) => setLockDays(e.target.value)}
+              min="30"
+              placeholder="Or enter custom days"
+              style={{ marginTop: '0.75rem' }}
+            />
+          </div>
+          <button
+            onClick={handleStake}
+            disabled={loading || !polAmount || parseFloat(polAmount) <= 0}
+            className="btn-primary"
+          >
+            {loading ? 'Staking...' : 'Stake POL'}
+          </button>
+
+          {parseFloat(claimableRewards) > 0 && (
+            <div className="rewards-section" style={{
+              marginTop: '20px',
+              padding: '15px',
+              background: 'rgba(139, 92, 246, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div>
+                  <strong style={{ color: 'var(--purple-glow)' }}>Claimable Rewards</strong>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--green-glow)', marginTop: '5px' }}>
+                    {parseFloat(claimableRewards).toFixed(2)} PUSD
+                  </div>
+                </div>
+                <button
+                  onClick={handleClaimRewards}
+                  disabled={loading}
+                  className="btn-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                  }}
+                >
+                  {loading ? 'Claiming...' : 'Claim Rewards'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="stakes-list">
+            <h3 
+              onClick={() => setShowStakesList(!showStakesList)} 
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+            >
+              Your Stakes ({stakes.length + pusdStakes.length}) {showStakesList ? '▼' : '▶'}
+            </h3>
+            {showStakesList && (
+              <>
+                {loadingStakes ? (
+                  <>
+                    <div className="skeleton skeleton-large"></div>
+                    <div className="skeleton skeleton-large"></div>
+                  </>
+                ) : stakes.length === 0 && pusdStakes.length === 0 ? (
+                  <p style={{ opacity: 0.6 }}>No active stakes</p>
+                ) : (
+                  <>
+                    {stakes.length > 0 && (
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <h4 style={{ color: 'var(--cyan-glow)', fontSize: '0.9rem', marginBottom: '0.75rem', textTransform: 'uppercase' }}>POL Stakes ({stakes.length})</h4>
+                        <div className="stakes-table">
+                          <div className="stakes-header">
+                            <div>Amount</div>
+                            <div>Points</div>
+                            <div>Unlock Date</div>
+                            <div>Action</div>
+                          </div>
+                          {stakes.map((stake, idx) => {
+                            const isUnlocked = Date.now() / 1000 > Number(stake.lockUntil);
+                            const unlockDate = new Date(Number(stake.lockUntil) * 1000);
+                            const daysRemaining = Math.ceil((Number(stake.lockUntil) - Date.now() / 1000) / 86400);
+                            return (
+                              <div key={idx} className="stake-row">
+                                <div className="stake-amount">
+                                  <strong>{formatBalance(stake.amount)} POL</strong>
+                                </div>
+                                <div className="stake-points">
+                                  {formatBalance(stake.points)}
+                                </div>
+                                <div className="stake-unlock">
+                                  {isUnlocked ? (
+                                    <span style={{ color: 'var(--green-glow)' }}>Unlocked</span>
+                                  ) : (
+                                    <span>{unlockDate.toLocaleDateString()} ({daysRemaining}d left)</span>
+                                  )}
+                                </div>
+                                <div className="stake-action">
+                                  {isUnlocked ? (
+                                    <button
+                                      onClick={() => handleUnstake(idx)}
+                                      disabled={loading}
+                                      className="btn-secondary small"
+                                    >
+                                      Unstake
+                                    </button>
+                                  ) : (
+                                    <span style={{ opacity: 0.5 }}>Locked</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {pusdStakes.length > 0 && (
+                      <div>
+                        <h4 style={{ color: 'var(--cyan-glow)', fontSize: '0.9rem', marginBottom: '0.75rem', textTransform: 'uppercase' }}>PUSD Stakes ({pusdStakes.length})</h4>
+                        <div className="stakes-table">
+                          <div className="stakes-header">
+                            <div>Amount</div>
+                            <div>Points</div>
+                            <div>Unlock Date</div>
+                            <div>Action</div>
+                          </div>
+                          {pusdStakes.map((stake, idx) => {
+                            const isUnlocked = Date.now() / 1000 > Number(stake.lockUntil);
+                            const unlockDate = new Date(Number(stake.lockUntil) * 1000);
+                            const daysRemaining = Math.ceil((Number(stake.lockUntil) - Date.now() / 1000) / 86400);
+                            return (
+                              <div key={`pusd-${idx}`} className="stake-row">
+                                <div className="stake-amount">
+                                  <strong>{formatBalance(stake.amount)} PUSD</strong>
+                                </div>
+                                <div className="stake-points">
+                                  {formatBalance(stake.points)}
+                                </div>
+                                <div className="stake-unlock">
+                                  {isUnlocked ? (
+                                    <span style={{ color: 'var(--green-glow)' }}>Unlocked</span>
+                                  ) : (
+                                    <span>{unlockDate.toLocaleDateString()} ({daysRemaining}d left)</span>
+                                  )}
+                                </div>
+                                <div className="stake-action">
+                                  {isUnlocked ? (
+                                    <button
+                                      onClick={() => handleUnstakePUSD(idx)}
+                                      disabled={loading}
+                                      className="btn-secondary small"
+                                    >
+                                      Unstake
+                                    </button>
+                                  ) : (
+                                    <span style={{ opacity: 0.5 }}>Locked</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
