@@ -10,18 +10,52 @@ export default defineConfig({
     }
   },
   build: {
+    // Enable minification
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log in production
+        drop_debugger: true,
+      },
+    },
+    // Optimize chunk splitting
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ethers-vendor': ['ethers'],
+          'three-vendor': ['three'],
+        },
+        // Optimize chunk file names
+        chunkFileNames: 'js/[name]-[hash].js',
+        entryFileNames: 'js/[name]-[hash].js',
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.');
+          const ext = info[info.length - 1];
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+            return `images/[name]-[hash][extname]`;
+          }
+          if (/woff2?|eot|ttf|otf/i.test(ext)) {
+            return `fonts/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
         },
       },
     },
     chunkSizeWarningLimit: 1000,
+    // Enable source maps for debugging (optional, can disable in production)
+    sourcemap: false,
+    // Optimize asset inlining threshold
+    assetsInlineLimit: 4096, // 4kb
   },
   optimizeDeps: {
-    include: ['ethers'],
+    include: ['ethers', 'react', 'react-dom', 'react-router-dom'],
+    // Exclude large dependencies from pre-bundling if needed
+    exclude: [],
+  },
+  // Enable CSS code splitting
+  css: {
+    devSourcemap: false,
   },
 })
 

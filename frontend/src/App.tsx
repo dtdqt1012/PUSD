@@ -1,11 +1,28 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import MainApp from './components/MainApp';
-import Intro from './pages/Intro';
-import Home from './pages/Home';
-import Roadmap from './pages/Roadmap';
-import FAQ from './pages/FAQ';
-import Whitepaper from './pages/Whitepaper';
 import './index.css';
+
+// Lazy load pages for better performance
+const Intro = lazy(() => import('./pages/Intro'));
+const Home = lazy(() => import('./pages/Home'));
+const Roadmap = lazy(() => import('./pages/Roadmap'));
+const FAQ = lazy(() => import('./pages/FAQ'));
+const Whitepaper = lazy(() => import('./pages/Whitepaper'));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    minHeight: '100vh',
+    color: '#8247e5'
+  }}>
+    <div>Loading...</div>
+  </div>
+);
 
 function Navigation() {
   const location = useLocation();
@@ -64,43 +81,46 @@ function Layout({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/app" element={<MainApp />} />
-        <Route path="/intro" element={<Intro />} />
-        <Route path="/" element={<Navigate to="/intro" replace />} />
-        <Route 
-          path="/home" 
-          element={
-            <Layout>
-              <Home />
-            </Layout>
-          } 
-        />
-        <Route 
-          path="/roadmap" 
-          element={
-            <Layout>
-              <Roadmap />
-            </Layout>
-          } 
-        />
-        <Route 
-          path="/faq" 
-          element={
-            <Layout>
-              <FAQ />
-            </Layout>
-          } 
-        />
-        <Route 
-          path="/whitepaper" 
-          element={
-            <Layout>
-              <Whitepaper />
-            </Layout>
-          } 
-        />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/app" element={<MainApp />} />
+          <Route path="/intro" element={<Intro />} />
+          <Route path="/" element={<Navigate to="/intro" replace />} />
+          <Route 
+            path="/home" 
+            element={
+              <Layout>
+                <Home />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/roadmap" 
+            element={
+              <Layout>
+                <Roadmap />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/faq" 
+            element={
+              <Layout>
+                <FAQ />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/whitepaper" 
+            element={
+              <Layout>
+                <Whitepaper />
+              </Layout>
+            } 
+          />
+        </Routes>
+      </Suspense>
+      <Analytics />
     </BrowserRouter>
   );
 }
