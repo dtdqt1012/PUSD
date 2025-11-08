@@ -27,6 +27,9 @@ export default function Home() {
             <Link to="/roadmap" className="btn-secondary">
               View Roadmap
             </Link>
+            <Link to="/whitepaper" className="btn-secondary">
+              Read Whitepaper
+            </Link>
           </div>
         </div>
         <div className="hero-stats">

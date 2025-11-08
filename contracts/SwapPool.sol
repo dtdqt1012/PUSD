@@ -36,6 +36,7 @@ contract SwapPool is Ownable, ReentrancyGuard {
     
     event SwapFeeUpdated(uint256 oldFee, uint256 newFee);
     event FeeRecipientUpdated(address oldRecipient, address newRecipient);
+    event POLDeposited(address indexed depositor, uint256 amount);
 
     constructor(
         address _pusdToken,
@@ -53,6 +54,14 @@ contract SwapPool is Ownable, ReentrancyGuard {
 
     receive() external payable {
         // Accept POL for swapping
+        // Note: Direct POL transfers are accepted but not tracked.
+        // Use depositPOL() to properly deposit POL into the pool.
+    }
+
+    function depositPOL() external payable nonReentrant {
+        require(msg.value > 0, "SwapPool: Must send POL");
+        totalPOLReserves += msg.value;
+        emit POLDeposited(msg.sender, msg.value);
     }
 
     function swapPOLtoPUSD(uint256 minPusdOut) external payable nonReentrant {

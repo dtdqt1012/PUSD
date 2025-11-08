@@ -4,6 +4,7 @@ import Intro from './pages/Intro';
 import Home from './pages/Home';
 import Roadmap from './pages/Roadmap';
 import FAQ from './pages/FAQ';
+import Whitepaper from './pages/Whitepaper';
 import './index.css';
 
 function Navigation() {
@@ -33,6 +34,12 @@ function Navigation() {
             className={`nav-link ${location.pathname === '/faq' ? 'active' : ''}`}
           >
             FAQ
+          </Link>
+          <Link 
+            to="/whitepaper" 
+            className={`nav-link ${location.pathname === '/whitepaper' ? 'active' : ''}`}
+          >
+            Whitepaper
           </Link>
           <Link to="/app" className="nav-link nav-link-app">
             PUSD App
@@ -82,6 +89,14 @@ function App() {
           element={
             <Layout>
               <FAQ />
+            </Layout>
+          } 
+        />
+        <Route 
+          path="/whitepaper" 
+          element={
+            <Layout>
+              <Whitepaper />
             </Layout>
           } 
         />

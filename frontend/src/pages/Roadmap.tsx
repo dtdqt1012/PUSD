@@ -23,16 +23,7 @@ export default function Roadmap() {
       ]
     },
     {
-      title: 'Phase 3: Expansion',
-      status: 'upcoming',
-      period: 'Q2 2024',
-      items: [
-        'All-in-One Wallet Platform',
-        'Mobile App Development'
-      ]
-    },
-    {
-      title: 'Phase 4: Ecosystem',
+      title: 'Phase 3: Ecosystem',
       status: 'upcoming',
       period: 'Q3 2024',
       items: [
@@ -43,7 +34,7 @@ export default function Roadmap() {
       ]
     },
     {
-      title: 'Phase 5: Integration',
+      title: 'Phase 4: Integration',
       status: 'upcoming',
       period: 'Q4 2024',
       items: [
@@ -54,7 +45,7 @@ export default function Roadmap() {
       ]
     },
     {
-      title: 'Phase 6: Fiat Integration',
+      title: 'Phase 5: Fiat Integration',
       status: 'upcoming',
       period: 'Q1 2025',
       items: [
