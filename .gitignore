@@ -46,3 +46,18 @@ artifacts/
 # Vercel
 .vercel
 
+# Electron
+frontend/dist-electron/
+frontend/out/
+frontend/*.exe
+frontend/*.dmg
+frontend/*.pkg
+frontend/*.deb
+frontend/*.rpm
+frontend/*.AppImage
+
+# Capacitor
+frontend/android/
+frontend/ios/
+frontend/.capacitor/
+
