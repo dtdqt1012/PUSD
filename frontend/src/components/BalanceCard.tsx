@@ -106,9 +106,10 @@ export default function BalanceCard() {
           const pusdStakedValue = results[6].status === 'fulfilled' && results[6].value ? formatBalance(results[6].value) : cached?.pusdStaked || '0';
           
           // PUSD trong contracts
-          const pusdInVault = results[7].status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
-          const pusdInSwap = results[8].status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
-          const pusdInPgoldVault = results[9].status === 'fulfilled' && results[9].value ? formatBalance(results[9].value) : '0';
+          // PUSD trong contracts (calculated but not used)
+          // const pusdInVault = results[7].status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
+          // const pusdInSwap = results[8].status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
+          // const pusdInPgoldVault = results[9].status === 'fulfilled' && results[9].value ? formatBalance(results[9].value) : '0';
           
           // PUSD mà users đang cầm = Total Supply - PUSD trong contracts (calculated but not used)
           // const pusdUsersHoldValue = Math.max(0, 
