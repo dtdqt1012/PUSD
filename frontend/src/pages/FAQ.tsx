@@ -56,6 +56,31 @@ const faqData: FAQItem[] = [
     category: 'Security',
     question: 'What happens if POL price drops?',
     answer: 'The system uses Chainlink oracle for real-time POL price feeds. If the collateral ratio drops significantly, the system may limit new mints to maintain stability. However, users can always redeem their PUSD for POL, ensuring liquidity and exit options.'
+  },
+  {
+    category: 'PGOLD',
+    question: 'What is PGOLD?',
+    answer: 'PGOLD (Polygon Gold) is a Real World Asset (RWA) token backed by gold. 1 PGOLD is equivalent to $4000 worth of gold, with the price dynamically updated based on real-time gold prices from Chainlink Oracle. You can mint PGOLD using PUSD and redeem it back to PUSD anytime.'
+  },
+  {
+    category: 'PGOLD',
+    question: 'How do I mint PGOLD?',
+    answer: 'To mint PGOLD, you need PUSD tokens. Connect your wallet, enter the amount of PUSD you want to use, and the system will calculate how much PGOLD you will receive based on the current gold price. There is a small minting fee (0.5% default) that goes to the vault reserves.'
+  },
+  {
+    category: 'PGOLD',
+    question: 'How is PGOLD price determined?',
+    answer: 'PGOLD price is determined by the real-time gold price from Chainlink XAU/USD oracle. The system ensures 1 PGOLD = $4000 worth of gold. The oracle updates continuously, and prices older than 2 hours are rejected to ensure accuracy.'
+  },
+  {
+    category: 'PGOLD',
+    question: 'Can I redeem PGOLD back to PUSD?',
+    answer: 'Yes, you can redeem PGOLD back to PUSD at any time. The amount of PUSD you receive is calculated based on the current gold price. There is a small redemption fee (0.5% default) that goes to the vault reserves.'
+  },
+  {
+    category: 'PGOLD',
+    question: 'What are the fees for PGOLD?',
+    answer: 'PGOLD has mint and redeem fees (default 0.5% each, configurable by owner). These fees help maintain the vault reserves and ensure the stability of the PGOLD ecosystem. The fees are transparent and shown before you confirm any transaction.'
   }
 ];
 

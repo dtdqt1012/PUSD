@@ -10,7 +10,9 @@ export default function Roadmap() {
         'Staking Pool (POL & PUSD)',
         'Swap Pool for Liquidity',
         'Chainlink Oracle Integration',
-        'Reward Distribution System'
+        'Reward Distribution System',
+        'PGOLD RWA Token Launch',
+        'Gold Oracle Integration'
       ]
     },
     {
@@ -19,7 +21,9 @@ export default function Roadmap() {
       period: 'Q1 2024',
       items: [
         'Community Building',
-        'Liquidity Incentives'
+        'Liquidity Incentives',
+        'PGOLD Mint/Redeem System',
+        'Real-time Gold Price Integration'
       ]
     },
     {

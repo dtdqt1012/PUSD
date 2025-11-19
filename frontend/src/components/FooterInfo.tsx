@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, memo, useCallback } from 'react';
 import { CONTRACTS } from '../config/contracts';
 
-export default function FooterInfo() {
+const FooterInfo = memo(function FooterInfo() {
   const [showContracts, setShowContracts] = useState(false);
+  
+  const toggleContracts = useCallback(() => {
+    setShowContracts(prev => !prev);
+  }, []);
   
   return (
     <div className="section footer-info">
       {/* Contract Info */}
       <div className="info-section">
         <h3 
-          onClick={() => setShowContracts(!showContracts)} 
+          onClick={toggleContracts} 
           style={{ cursor: 'pointer', userSelect: 'none' }}
         >
           Contract Addresses {showContracts ? '▼' : '▶'}
@@ -41,5 +45,7 @@ export default function FooterInfo() {
       </div>
     </div>
   );
-}
+});
+
+export default FooterInfo;
 

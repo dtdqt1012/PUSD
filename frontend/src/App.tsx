@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
+import { NotificationProvider } from './contexts/NotificationContext';
 import MainApp from './components/MainApp';
 import './index.css';
 
@@ -69,12 +70,14 @@ function Navigation() {
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="layout">
-      <Navigation />
-      <main className="main-content-wrapper">
-        {children}
-      </main>
-    </div>
+    <NotificationProvider>
+      <div className="layout">
+        <Navigation />
+        <main className="main-content-wrapper">
+          {children}
+        </main>
+      </div>
+    </NotificationProvider>
   );
 }
 

@@ -5,6 +5,9 @@ import { useNotification } from '../contexts/NotificationContext';
 import { CONTRACTS } from '../config/contracts';
 import { parseAmount, formatBalance } from '../utils/format';
 import { cache } from '../utils/cache';
+import { executeTransaction, getTransactionErrorMessage } from '../utils/transaction';
+import { loadWithTimeout } from '../utils/loadWithTimeout';
+import { useExpandable } from '../hooks/useExpandable';
 
 interface Stake {
   amount: bigint;
@@ -22,18 +25,10 @@ interface PUSDStake {
   active: boolean;
 }
 
-const loadWithTimeout = <T,>(promise: Promise<T>, timeout: number): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), timeout)
-    )
-  ]);
-};
-
 export default function StakingSection() {
   const { signer, account, isConnected } = useWeb3();
   const { showNotification } = useNotification();
+  const { isExpanded, toggle, headerStyle, toggleIcon } = useExpandable();
   const [polAmount, setPolAmount] = useState('');
   const [lockDays, setLockDays] = useState('30');
   const [stakes, setStakes] = useState<Stake[]>([]);
@@ -41,7 +36,6 @@ export default function StakingSection() {
   const [loading, setLoading] = useState(false);
   const [loadingStakes, setLoadingStakes] = useState(true);
   const [showStakesList, setShowStakesList] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [claimableRewards, setClaimableRewards] = useState<string>('0');
   const mountedRef = useRef(true);
 
@@ -109,7 +103,7 @@ export default function StakingSection() {
       };
 
       loadStakes();
-    }, 300);
+    }, 100); // Reduced initial delay for faster load
 
     const interval = setInterval(() => {
       if (signer && account && mountedRef.current) {
@@ -142,7 +136,7 @@ export default function StakingSection() {
           }
         })();
       }
-    }, 30000);
+    }, 60000); // Auto-refresh every 60 seconds (reduced RPC calls)
 
     return () => {
       clearTimeout(timeoutId);
@@ -161,8 +155,15 @@ export default function StakingSection() {
     try {
       const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
       const polWei = parseAmount(polAmount);
-      const tx = await stakingContract.stake(parseInt(lockDays), { value: polWei });
-      await tx.wait();
+      
+      await executeTransaction(
+        stakingContract,
+        'stake',
+        [parseInt(lockDays)],
+        signer,
+        { value: polWei }
+      );
+      
       showNotification('Stake successful!', 'success');
       setPolAmount('');
       cache.delete(`stakes-${account}`);
@@ -172,7 +173,7 @@ export default function StakingSection() {
       }
     } catch (error: any) {
       console.error('Stake failed:', error);
-      showNotification(error?.reason || 'Stake failed', 'error');
+      showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -184,8 +185,14 @@ export default function StakingSection() {
     setLoading(true);
     try {
       const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
-      const tx = await stakingContract.unstake(stakeId);
-      await tx.wait();
+      
+      await executeTransaction(
+        stakingContract,
+        'unstake',
+        [stakeId],
+        signer
+      );
+      
       showNotification('Unstake successful!', 'success');
       cache.delete(`stakes-${account}`);
       const updatedStakes = await stakingContract.getUserActiveStakes(account);
@@ -194,7 +201,7 @@ export default function StakingSection() {
       }
     } catch (error: any) {
       console.error('Unstake failed:', error);
-      showNotification(error?.reason || 'Unstake failed', 'error');
+      showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -206,8 +213,14 @@ export default function StakingSection() {
     setLoading(true);
     try {
       const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
-      const tx = await stakingContract.unstakePUSD(stakeId);
-      await tx.wait();
+      
+      await executeTransaction(
+        stakingContract,
+        'unstakePUSD',
+        [stakeId],
+        signer
+      );
+      
       showNotification('Unstake PUSD successful!', 'success');
       cache.delete(`pusd-stakes-${account}`);
       const updatedStakes = await stakingContract.getUserActivePUSDStakes(account);
@@ -216,7 +229,7 @@ export default function StakingSection() {
       }
     } catch (error: any) {
       console.error('Unstake PUSD failed:', error);
-      showNotification(error?.reason || 'Unstake PUSD failed', 'error');
+      showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -232,13 +245,19 @@ export default function StakingSection() {
     setLoading(true);
     try {
       const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, signer);
-      const tx = await rewardContract.claimRewards();
-      await tx.wait();
+      
+      await executeTransaction(
+        rewardContract,
+        'claimRewards',
+        [],
+        signer
+      );
+      
       showNotification('Rewards claimed successfully!', 'success');
       setClaimableRewards('0');
     } catch (error: any) {
       console.error('Claim rewards failed:', error);
-      showNotification(error?.reason || 'Failed to claim rewards', 'error');
+      showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -246,8 +265,8 @@ export default function StakingSection() {
 
   return (
     <div className="section staking-section">
-      <h2 onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-        Stake POL {isExpanded ? '▼' : '▶'}
+      <h2 onClick={toggle} style={headerStyle}>
+        Stake POL {toggleIcon}
       </h2>
       {isExpanded && (
         <>

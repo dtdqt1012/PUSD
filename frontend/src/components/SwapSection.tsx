@@ -4,17 +4,19 @@ import { useWeb3 } from '../hooks/useWeb3';
 import { useNotification } from '../contexts/NotificationContext';
 import { CONTRACTS } from '../config/contracts';
 import { parseAmount, formatBalance } from '../utils/format';
+import { executeTransaction, getTransactionErrorMessage } from '../utils/transaction';
+import { useExpandable } from '../hooks/useExpandable';
 
 export default function SwapSection() {
   const { signer, account, isConnected, provider } = useWeb3();
   const { showNotification } = useNotification();
+  const { isExpanded, toggle, headerStyle, toggleIcon } = useExpandable();
   const [swapType, setSwapType] = useState<'POL_TO_PUSD' | 'PUSD_TO_POL'>('POL_TO_PUSD');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [poolReserves, setPoolReserves] = useState<string>('0');
   const [quote, setQuote] = useState<string>('0');
   const [fee, setFee] = useState<string>('0');
-  const [isExpanded, setIsExpanded] = useState(false);
 
   // Load pool reserves
   useEffect(() => {
@@ -34,7 +36,8 @@ export default function SwapSection() {
     };
 
     loadReserves();
-    const interval = setInterval(loadReserves, 30000);
+    // Increase interval to 60 seconds to reduce RPC calls
+    const interval = setInterval(loadReserves, 60000);
     return () => clearInterval(interval);
   }, [provider]);
 
@@ -130,54 +133,74 @@ export default function SwapSection() {
         }
         
         
-        try {
-          const tx = await swapContract.swapPOLtoPUSD(minPusdOut, { value: polWei });
-          await tx.wait();
-          showNotification('Swap successful! POL added to pool reserves.', 'success');
-          setPoolReserves((prev) => (parseFloat(prev) + parseFloat(amount)).toFixed(4));
-        } catch (txError: any) {
-          // Try to extract more detailed error message
-          let errorMsg = 'Swap failed';
-          
-          // Check for specific error patterns
-          if (txError?.reason) {
-            errorMsg = txError.reason;
-          } else if (txError?.message) {
-            // Check if it's a revert message
-            const revertMatch = txError.message.match(/revert (.+)/);
-            if (revertMatch) {
-              errorMsg = revertMatch[1];
-            } else if (txError.message.includes('execution reverted')) {
-              errorMsg = 'Transaction reverted. Possible causes: insufficient balance, slippage too high, or contract error.';
-            } else {
-              errorMsg = txError.message;
-            }
-          } else if (txError?.code === 'CALL_EXCEPTION') {
-            errorMsg = 'Transaction reverted. Possible causes: Oracle error, insufficient permissions, or slippage too high.';
-          }
-          
-          console.error('Swap transaction failed:', txError);
-          showNotification(errorMsg, 'error');
-          setLoading(false);
-          return;
-        }
+        await executeTransaction(
+          swapContract,
+          'swapPOLtoPUSD',
+          [minPusdOut],
+          signer,
+          { value: polWei }
+        );
+        
+        showNotification('Swap successful! POL added to pool reserves.', 'success');
+        setPoolReserves((prev) => (parseFloat(prev) + parseFloat(amount)).toFixed(4));
       } else {
         const pusdWei = parseAmount(amount);
         const pusdTokenContract = new Contract(CONTRACTS.PUSDToken.address, CONTRACTS.PUSDToken.abi, signer);
         
-        // Check allowance for correct contract
+        // Check balance first
+        const balance = await pusdTokenContract.balanceOf(account);
+        if (balance < pusdWei) {
+          showNotification(`Insufficient PUSD balance. You have ${formatBalance(balance)} PUSD.`, 'error');
+          return;
+        }
+        
+        // Check allowance - even if SwapPool is a burner, _spendAllowance still needs allowance >= amount
+        // So we always need to approve
         const allowance = await pusdTokenContract.allowance(account, swapAddress);
         if (allowance < pusdWei) {
-          const approveTx = await pusdTokenContract.approve(swapAddress, pusdWei);
-          await approveTx.wait();
+          showNotification('Approving PUSD for swap...', 'info');
+          // Approve max to avoid repeated approvals
+          const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+          await executeTransaction(
+            pusdTokenContract,
+            'approve',
+            [swapAddress, maxApproval],
+            signer
+          );
+          showNotification('Approval successful. Proceeding with swap...', 'success');
         }
         
         // Get quote for slippage protection
-        const [quotePol] = await swapContract.getPUSDtoPOLQuote(pusdWei);
+        const [quotePol, feePol] = await swapContract.getPUSDtoPOLQuote(pusdWei);
         const minPolOut = quotePol - (quotePol / 100n); // 1% slippage tolerance
         
-        const tx = await swapContract.swapPUSDtoPOL(pusdWei, minPolOut);
-        await tx.wait();
+        // Check if pool has enough POL
+        // Contract checks: address(this).balance >= polAmount (before fee)
+        // polAmount = quotePol + feePol (total POL needed before fee deduction)
+        const poolBalance = await swapContract.getBalance();
+        const polAmountBeforeFee = quotePol + feePol; // Total POL before fee (what contract checks)
+        if (poolBalance < polAmountBeforeFee) {
+          showNotification(`Insufficient POL in pool. Pool has ${formatBalance(poolBalance)} POL, but needs ${formatBalance(polAmountBeforeFee)} POL.`, 'error');
+          return;
+        }
+        
+        // Log debug info
+        console.log('[Swap Debug]', {
+          pusdAmount: formatBalance(pusdWei),
+          quotePol: formatBalance(quotePol),
+          feePol: formatBalance(feePol),
+          minPolOut: formatBalance(minPolOut),
+          poolBalance: formatBalance(poolBalance),
+          polAmountBeforeFee: formatBalance(polAmountBeforeFee),
+        });
+        
+        await executeTransaction(
+          swapContract,
+          'swapPUSDtoPOL',
+          [pusdWei, minPolOut],
+          signer
+        );
+        
         showNotification('Swap successful! POL withdrawn from pool reserves.', 'success');
       }
       setAmount('');
@@ -185,15 +208,7 @@ export default function SwapSection() {
       setFee('0');
     } catch (error: any) {
       console.error('Swap failed:', error);
-      let errorMsg = 'Swap failed';
-      if (error?.reason) {
-        errorMsg = error.reason;
-      } else if (error?.message) {
-        errorMsg = error.message;
-      } else if (error?.code === 'CALL_EXCEPTION') {
-        errorMsg = 'Transaction reverted. Possible causes: Oracle not configured, insufficient permissions, or slippage too high.';
-      }
-      showNotification(errorMsg, 'error');
+      showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -201,8 +216,8 @@ export default function SwapSection() {
 
   return (
     <div className="section swap-section">
-      <h2 onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-        Swap {isExpanded ? '▼' : '▶'}
+      <h2 onClick={toggle} style={headerStyle}>
+        Swap {toggleIcon}
       </h2>
       {isExpanded && (
         <>

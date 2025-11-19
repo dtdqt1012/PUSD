@@ -11,7 +11,13 @@ const POLYGON_MAINNET_PARAMS = {
     symbol: 'POL',
     decimals: 18,
   },
-  rpcUrls: ['https://polygon-rpc.com'],
+  rpcUrls: [
+    'https://polygon-rpc.com',
+    'https://rpc.ankr.com/polygon',
+    'https://polygon.llamarpc.com',
+    'https://polygon.blockpi.network/v1/rpc/public',
+    'https://1rpc.io/matic',
+  ],
   blockExplorerUrls: ['https://polygonscan.com'],
 };
 

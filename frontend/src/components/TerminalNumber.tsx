@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo, useMemo } from 'react';
 
 interface TerminalNumberProps {
   value: string | number;
@@ -9,7 +9,7 @@ interface TerminalNumberProps {
   randomChars?: string;
 }
 
-export default function TerminalNumber({
+const TerminalNumber = memo(function TerminalNumber({
   value,
   prefix = '',
   suffix = '',
@@ -77,12 +77,19 @@ export default function TerminalNumber({
     };
   }, [value, duration, randomChars]);
 
+  const spanClassName = useMemo(
+    () => `terminal-number ${isAnimating ? 'scrambling' : ''} ${className}`.trim(),
+    [isAnimating, className]
+  );
+
   return (
-    <span className={`terminal-number ${isAnimating ? 'scrambling' : ''} ${className}`}>
+    <span className={spanClassName}>
       {prefix}
       {displayValue}
       {suffix}
     </span>
   );
-}
+});
+
+export default TerminalNumber;
 

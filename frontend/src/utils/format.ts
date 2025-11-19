@@ -33,3 +33,38 @@ export const formatPrice = (price: bigint, decimals: number = 8): string => {
   }
 };
 
+/**
+ * Format PGOLD amount without rounding
+ * Removes trailing zeros but keeps full precision
+ */
+export const formatPGOLD = (amount: string | bigint, decimals: number = 18): string => {
+  try {
+    let formatted: string;
+    if (typeof amount === 'bigint') {
+      formatted = formatUnits(amount, decimals);
+    } else {
+      formatted = amount;
+    }
+    
+    // Remove trailing zeros but keep all significant digits
+    // Split by decimal point
+    const parts = formatted.split('.');
+    if (parts.length === 1) {
+      return parts[0];
+    }
+    
+    // Remove trailing zeros from decimal part
+    const integerPart = parts[0];
+    const decimalPart = parts[1].replace(/0+$/, '');
+    
+    // If decimal part is empty after removing zeros, return integer only
+    if (decimalPart === '') {
+      return integerPart;
+    }
+    
+    return `${integerPart}.${decimalPart}`;
+  } catch {
+    return '0';
+  }
+};
+

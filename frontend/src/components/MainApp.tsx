@@ -10,6 +10,13 @@ const MintSection = lazy(() => import('./MintSection'));
 const StakingSection = lazy(() => import('./StakingSection'));
 const SwapSection = lazy(() => import('./SwapSection'));
 const Leaderboard = lazy(() => import('./Leaderboard'));
+const PGOLDInfoCard = lazy(() => import('./PGOLDInfoCard'));
+const PGOLDMintSection = lazy(() => import('./PGOLDMintSection'));
+const PGOLDRedeemSection = lazy(() => import('./PGOLDRedeemSection'));
+
+const Lazy = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<LoadingSkeleton />}>{children}</Suspense>
+);
 
 export default function MainApp() {
   return (
@@ -24,24 +31,22 @@ export default function MainApp() {
           <BalanceCard />
           
           <div className="actions-grid">
-            <Suspense fallback={<LoadingSkeleton />}>
-              <MintSection />
-            </Suspense>
-            
-            <Suspense fallback={<LoadingSkeleton />}>
-              <StakingSection />
-            </Suspense>
-            
-            <Suspense fallback={<LoadingSkeleton />}>
-              <SwapSection />
-            </Suspense>
+            <Lazy><MintSection /></Lazy>
+            <Lazy><StakingSection /></Lazy>
+            <Lazy><SwapSection /></Lazy>
           </div>
         
-        <Suspense fallback={<LoadingSkeleton />}>
-          <Leaderboard />
-        </Suspense>
+          <Lazy><Leaderboard /></Lazy>
+
+          <div className="pgold-section">
+            <Lazy><PGOLDInfoCard /></Lazy>
+            <div className="actions-grid">
+              <Lazy><PGOLDMintSection /></Lazy>
+              <Lazy><PGOLDRedeemSection /></Lazy>
+            </div>
+          </div>
         
-        <FooterInfo />
+          <FooterInfo />
         </main>
       </div>
     </NotificationProvider>

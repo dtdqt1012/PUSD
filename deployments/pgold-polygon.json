@@ -1,0 +1,16 @@
+{
+  "network": "polygon",
+  "chainId": "137",
+  "deployer": "0x27BE66DdB44074D45B4dCf6aae43e4EB48001010",
+  "contracts": {
+    "GoldOracle": "0x099aC141F32460a194Dc0b613DA23c9b95A19Cc9",
+    "PGOLDToken": "0xf24418259AbA83D59a86343bfAd50dd5De71F850",
+    "PGOLDVault": "0xA2d090dE61bAa666430E2C197C06e5139226B2D2"
+  },
+  "oracle": {
+    "chainlinkXAUUSD": "0x0C466540B2ee1a31b441671eac0ca886e051E410"
+  },
+  "pusdToken": "0x182cD2Ea5FA4951C05bC8De8d76FC0977AB75187",
+  "timestamp": "2025-01-18T00:00:00.000Z"
+}
+

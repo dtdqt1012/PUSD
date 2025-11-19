@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^0.6.1",
+    "@react-three/fiber": "^9.4.0",
     "dotenv": "^16.3.1"
   }
 }
-

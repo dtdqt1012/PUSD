@@ -198,7 +198,7 @@ export default function Whitepaper() {
             
             <h3>4.1 System Overview</h3>
             <p>
-              PUSD consists of six core smart contract components:
+              PUSD consists of nine core smart contract components:
             </p>
             <ol>
               <li>PUSD Token (ERC20)</li>
@@ -207,6 +207,9 @@ export default function Whitepaper() {
               <li>SwapPool</li>
               <li>RewardDistributor</li>
               <li>OraclePriceFeed</li>
+              <li>PGOLD Token (RWA)</li>
+              <li>PGOLDVault</li>
+              <li>GoldOracle</li>
             </ol>
 
             <h3>4.2 Core Components</h3>
@@ -275,6 +278,42 @@ export default function Whitepaper() {
               <li><strong>DEX Pool</strong> (fallback) - Uniswap V2 / QuickSwap compatible</li>
               <li><strong>Manual Price</strong> (emergency) - Admin-set price</li>
             </ol>
+
+            <h4>4.2.7 PGOLD Token</h4>
+            <p><strong>Purpose:</strong> Real World Asset (RWA) token backed by gold</p>
+            <p><strong>Key Features:</strong></p>
+            <ul>
+              <li>1 PGOLD = $4000 worth of gold (dynamic pricing)</li>
+              <li>ERC20 token with mint/burn functionality</li>
+              <li>Minter/Burner roles managed by PGOLDVault</li>
+              <li>Real-time price updates from Chainlink XAU/USD</li>
+            </ul>
+
+            <h4>4.2.8 PGOLDVault</h4>
+            <p><strong>Purpose:</strong> Mint and redeem PGOLD using PUSD</p>
+            <p><strong>Mechanism:</strong></p>
+            <ul>
+              <li>Mint PGOLD: Deposit PUSD, receive PGOLD based on gold price</li>
+              <li>Redeem PGOLD: Deposit PGOLD, receive PUSD based on gold price</li>
+              <li>Mint/Redeem fees (0.5% default) go to vault reserves</li>
+              <li>Slippage protection ensures fair pricing</li>
+              <li>Staleness check: Rejects prices older than 2 hours</li>
+            </ul>
+
+            <h4>4.2.9 GoldOracle</h4>
+            <p><strong>Purpose:</strong> Get real-time gold price in USD</p>
+            <p><strong>Price Sources (Priority Order):</strong></p>
+            <ol>
+              <li><strong>Chainlink XAU/USD</strong> (primary) - Real-time gold price</li>
+              <li><strong>Manual Price</strong> (fallback) - Admin-set price if Chainlink fails</li>
+            </ol>
+            <p><strong>Features:</strong></p>
+            <ul>
+              <li>8 decimals precision</li>
+              <li>2-hour staleness check</li>
+              <li>Automatic price updates</li>
+              <li>Emergency manual override</li>
+            </ul>
           </section>
 
           {/* 5. Tokenomics */}
@@ -314,6 +353,32 @@ export default function Whitepaper() {
               <li><strong>120-365 days:</strong> 3x-10x multiplier</li>
               <li><strong>365+ days:</strong> 10x multiplier (cap)</li>
             </ul>
+
+            <h3>5.4 PGOLD Tokenomics</h3>
+            <p><strong>Supply Model:</strong></p>
+            <ul>
+              <li><strong>Type:</strong> Real World Asset (RWA) token</li>
+              <li><strong>Backing:</strong> Gold (via Chainlink XAU/USD oracle)</li>
+              <li><strong>Peg:</strong> 1 PGOLD = $4000 worth of gold (dynamic)</li>
+              <li><strong>Supply:</strong> Dynamic (mint/burn based on demand)</li>
+              <li><strong>Reserve:</strong> PUSD tokens held in vault</li>
+            </ul>
+            <p><strong>Minting Mechanism:</strong></p>
+            <ol>
+              <li>User deposits PUSD to PGOLDVault</li>
+              <li>GoldOracle provides current gold price</li>
+              <li>Calculate PGOLD amount: PUSD / (Gold Price × 4000)</li>
+              <li>Apply mint fee (0.5% default)</li>
+              <li>User receives PGOLD tokens</li>
+            </ol>
+            <p><strong>Redeeming Mechanism:</strong></p>
+            <ol>
+              <li>User deposits PGOLD to PGOLDVault</li>
+              <li>GoldOracle provides current gold price</li>
+              <li>Calculate PUSD amount: PGOLD × (Gold Price × 4000)</li>
+              <li>Apply redeem fee (0.5% default)</li>
+              <li>User receives PUSD tokens</li>
+            </ol>
           </section>
 
           {/* 6. Security */}

@@ -3,15 +3,8 @@ import { Contract } from 'ethers';
 import { useWeb3 } from '../hooks/useWeb3';
 import { CONTRACTS } from '../config/contracts';
 import { formatBalance, formatPrice } from '../utils/format';
-
-const loadWithTimeout = <T,>(promise: Promise<T>, timeout: number): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), timeout)
-    )
-  ]);
-};
+import { loadWithTimeout } from '../utils/loadWithTimeout';
+import { useExpandable } from '../hooks/useExpandable';
 
 function ProjectInfo() {
   const { provider } = useWeb3();
@@ -21,7 +14,7 @@ function ProjectInfo() {
   const [totalStaked, setTotalStaked] = useState<string>('0');
   const [swapPoolReserves, setSwapPoolReserves] = useState<string>('0');
   const [pusdStaked, setPusdStaked] = useState<string>('0');
-  const [isExpanded, setIsExpanded] = useState(true); // Default expanded
+  const { isExpanded, toggle, headerStyle, toggleIcon } = useExpandable(true);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -36,6 +29,10 @@ function ProjectInfo() {
 
     const loadStats = async () => {
       try {
+        const pgoldVaultContract = CONTRACTS.PGOLDVault 
+          ? new Contract(CONTRACTS.PGOLDVault.address, CONTRACTS.PGOLDVault.abi, provider)
+          : null;
+        
         const [oracleContract, pusdContract, vaultContract, stakingContract, swapContract] = await Promise.all([
           new Contract(CONTRACTS.OraclePriceFeed.address, CONTRACTS.OraclePriceFeed.abi, provider),
           new Contract(CONTRACTS.PUSDToken.address, CONTRACTS.PUSDToken.abi, provider),
@@ -51,19 +48,33 @@ function ProjectInfo() {
           loadWithTimeout(stakingContract.totalStaked(), 5000).catch(() => null),
           loadWithTimeout(swapContract.getBalance(), 5000).catch(() => null),
           loadWithTimeout(stakingContract.totalPUSDStaked(), 5000).catch(() => null),
+          // PUSD trong contracts để tính PUSD users đang cầm
+          loadWithTimeout(pusdContract.balanceOf(CONTRACTS.MintingVault.address), 5000).catch(() => null),
+          loadWithTimeout(pusdContract.balanceOf(CONTRACTS.SwapPool.address), 5000).catch(() => null),
+          pgoldVaultContract ? loadWithTimeout(pusdContract.balanceOf(CONTRACTS.PGOLDVault.address), 5000).catch(() => null) : Promise.resolve(null),
         ]);
 
         if (!mountedRef.current) return;
 
         const price = results[0].status === 'fulfilled' && results[0].value ? formatPrice(results[0].value) : '0';
-        const total = results[1].status === 'fulfilled' && results[1].value ? formatBalance(results[1].value) : '0';
+        const totalSupply = results[1].status === 'fulfilled' && results[1].value ? formatBalance(results[1].value) : '0';
         const vault = results[2].status === 'fulfilled' && results[2].value ? formatBalance(results[2].value) : '0';
         const staked = results[3].status === 'fulfilled' && results[3].value ? formatBalance(results[3].value) : '0';
         const swapReserves = results[4].status === 'fulfilled' && results[4].value ? formatBalance(results[4].value) : '0';
         const pusdStakedValue = results[5].status === 'fulfilled' && results[5].value ? formatBalance(results[5].value) : '0';
+        
+        // Tính PUSD trong contracts
+        const pusdInVault = results[6].status === 'fulfilled' && results[6].value ? formatBalance(results[6].value) : '0';
+        const pusdInSwap = results[7].status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
+        const pusdInPgoldVault = results[8].status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
+        
+        // PUSD mà users đang cầm = Total Supply - PUSD trong contracts
+        const pusdUsersHold = Math.max(0, 
+          parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue) - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault)
+        );
 
         setPolPrice(price);
-        setTotalPusd(total);
+        setTotalPusd(totalSupply); // Vẫn hiển thị total supply
         setVaultPol(vault);
         setTotalStaked(staked);
         setSwapPoolReserves(swapReserves);
@@ -74,21 +85,19 @@ function ProjectInfo() {
     };
 
     loadStats();
-    const interval = setInterval(loadStats, 30000); // Auto-refresh every 30 seconds
+    const interval = setInterval(loadStats, 60000); // Auto-refresh every 60 seconds (reduced RPC calls)
     return () => clearInterval(interval);
   }, [provider]);
 
   const marketCap = parseFloat(totalPusd) * parseFloat(polPrice);
-  // TVL = (Vault POL + Staked POL + Swap Reserves) * POL Price + PUSD Staked (1 PUSD = $1)
-  const tvl = (parseFloat(vaultPol) + parseFloat(totalStaked) + parseFloat(swapPoolReserves)) * parseFloat(polPrice) + parseFloat(pusdStaked);
-  // Collateral Ratio = TVL / Total PUSD
-  // Includes: Vault POL, Staked POL, Swap Pool Reserves (all converted to USD), and PUSD Staked (1 PUSD = $1)
-  const collateralRatio = parseFloat(totalPusd) > 0 ? (tvl / parseFloat(totalPusd) * 100) : 0;
+  // TVL = Tất cả POL đang lock (Vault + Staking + Swap Pool) * POL Price
+  const tvl = (parseFloat(vaultPol) + parseFloat(totalStaked) + parseFloat(swapPoolReserves)) * parseFloat(polPrice);
+  
 
   return (
     <div className="section project-info">
-      <h2 onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-        Project Info {isExpanded ? '▼' : '▶'}
+      <h2 onClick={toggle} style={headerStyle}>
+        Project Info {toggleIcon}
       </h2>
       
       {isExpanded && (
@@ -111,10 +120,6 @@ function ProjectInfo() {
               <div className="stat-item highlight">
                 <strong>TVL</strong>
                 <span>${tvl.toFixed(2)}</span>
-              </div>
-              <div className="stat-item highlight">
-                <strong>Collateral Ratio</strong>
-                <span>{collateralRatio.toFixed(1)}%</span>
               </div>
               <div className="stat-item">
                 <strong>PUSD Staked</strong>

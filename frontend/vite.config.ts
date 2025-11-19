@@ -6,8 +6,11 @@ export default defineConfig({
   server: {
     port: 3000,
     headers: {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://polygon-rpc.com https://*.polygon-rpc.com wss://*.polygon-rpc.com;"
-    }
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; connect-src 'self' https://polygon-rpc.com https://*.polygon-rpc.com wss://*.polygon-rpc.com https://va.vercel-scripts.com https://api.coingecko.com https://gasstation.polygon.technology;"
+    },
+    fs: {
+      allow: ['..'],
+    },
   },
   build: {
     // Enable minification
@@ -16,6 +19,10 @@ export default defineConfig({
       compress: {
         drop_console: true, // Remove console.log in production
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+        passes: 3, // More passes for better optimization
+        dead_code: true,
+        unused: true,
       },
     },
     // Optimize chunk splitting
@@ -47,11 +54,17 @@ export default defineConfig({
     sourcemap: false,
     // Optimize asset inlining threshold
     assetsInlineLimit: 4096, // 4kb
+    // CSS code splitting
+    cssCodeSplit: true,
+    // Report compressed size
+    reportCompressedSize: true,
   },
   optimizeDeps: {
     include: ['ethers', 'react', 'react-dom', 'react-router-dom'],
     // Exclude large dependencies from pre-bundling if needed
     exclude: [],
+    // Force optimization
+    force: true,
   },
   // Enable CSS code splitting
   css: {

@@ -5,16 +5,18 @@ import { useNotification } from '../contexts/NotificationContext';
 import { CONTRACTS } from '../config/contracts';
 import { parseAmount, formatBalance, formatPrice } from '../utils/format';
 import { cache } from '../utils/cache';
+import { executeTransaction, getTransactionErrorMessage } from '../utils/transaction';
+import { useExpandable } from '../hooks/useExpandable';
 
 export default function MintSection() {
   const { signer, isConnected, provider } = useWeb3();
   const { showNotification } = useNotification();
+  const { isExpanded, toggle, headerStyle, toggleIcon } = useExpandable();
   const [polAmount, setPolAmount] = useState('');
   const [lockDays, setLockDays] = useState('30');
   const [pusdReceive, setPusdReceive] = useState('');
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
 
@@ -181,14 +183,21 @@ export default function MintSection() {
       
       const vaultContract = new Contract(vaultAddress, vaultABI, signer);
       const polWei = parseAmount(polAmount);
-      const tx = await vaultContract.mintWithPOL(parseInt(lockDays), { value: polWei });
-      await tx.wait();
+      
+      await executeTransaction(
+        vaultContract,
+        'mintWithPOL',
+        [parseInt(lockDays)],
+        signer,
+        { value: polWei }
+      );
+      
       showNotification('Mint successful!', 'success');
       setPolAmount('');
       setPusdReceive('');
     } catch (error: any) {
       console.error('Mint failed:', error);
-      showNotification(error?.reason || 'Mint failed', 'error');
+      showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -196,8 +205,8 @@ export default function MintSection() {
 
   return (
     <div className="section mint-section">
-      <h2 onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-        Mint PUSD {isExpanded ? '▼' : '▶'}
+      <h2 onClick={toggle} style={headerStyle}>
+        Mint PUSD {toggleIcon}
       </h2>
       {isExpanded && (
         <>

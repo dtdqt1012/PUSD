@@ -4,12 +4,14 @@ require("dotenv").config();
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
-    version: "0.8.20",
+    version: "0.8.20", // Updated to fix compiler warnings
     settings: {
       optimizer: {
         enabled: true,
         runs: 200,
       },
+      // Enable viaIR to avoid "Stack too deep" errors in complex contracts
+      viaIR: true
     },
   },
   networks: {
@@ -21,13 +23,15 @@ module.exports = {
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
     polygon: {
-      url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
+      // Use Tatum Gateway for higher rate limit (200 RPS vs 3 RPS free)
+      url: process.env.POLYGON_RPC_URL || "https://polygon-mainnet.gateway.tatum.io",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 137,
+      timeout: 120000,
     },
   },
   etherscan: {
-    // Use single API key for Etherscan API v2
+    // Use Etherscan API v2
     apiKey: process.env.POLYGONSCAN_API_KEY || "",
     customChains: [
       {

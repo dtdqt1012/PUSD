@@ -6,15 +6,7 @@ import { CONTRACTS } from '../config/contracts';
 import { formatBalance, formatPrice } from '../utils/format';
 import { cache } from '../utils/cache';
 import TerminalNumber from './TerminalNumber';
-
-const loadWithTimeout = <T,>(promise: Promise<T>, timeout: number): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), timeout)
-    )
-  ]);
-};
+import { loadWithTimeout } from '../utils/loadWithTimeout';
 
 export default function BalanceCard() {
   const { provider, account, signer } = useWeb3();
@@ -30,6 +22,7 @@ export default function BalanceCard() {
   const [totalStakes, setTotalStakes] = useState<string>('0');
   const [swapPoolReserves, setSwapPoolReserves] = useState<string>('0');
   const [pusdStaked, setPusdStaked] = useState<string>('0');
+  const [pusdUsersHold, setPusdUsersHold] = useState<string>('0'); // PUSD mà users đang cầm
   const [claimableRewards, setClaimableRewards] = useState<string>('0');
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false);
@@ -76,6 +69,10 @@ export default function BalanceCard() {
           const swapAddress = CONTRACTS.SwapPool.address;
           const swapABI = CONTRACTS.SwapPool.abi;
 
+          const pgoldVaultContract = CONTRACTS.PGOLDVault 
+            ? new Contract(CONTRACTS.PGOLDVault.address, CONTRACTS.PGOLDVault.abi, provider)
+            : null;
+          
           const [oracleContract, pusdContract, vaultContract, stakingContract, swapContract] = await Promise.all([
             new Contract(CONTRACTS.OraclePriceFeed.address, CONTRACTS.OraclePriceFeed.abi, provider),
             new Contract(CONTRACTS.PUSDToken.address, CONTRACTS.PUSDToken.abi, provider),
@@ -92,26 +89,41 @@ export default function BalanceCard() {
               loadWithTimeout(stakingContract.totalStakes(), 5000).catch(() => null),
               loadWithTimeout(swapContract.getBalance(), 5000).catch(() => null),
               loadWithTimeout(stakingContract.totalPUSDStaked(), 5000).catch(() => null),
+              // PUSD trong contracts để tính PUSD users đang cầm
+              loadWithTimeout(pusdContract.balanceOf(CONTRACTS.MintingVault.address), 5000).catch(() => null),
+              loadWithTimeout(pusdContract.balanceOf(CONTRACTS.SwapPool.address), 5000).catch(() => null),
+              pgoldVaultContract ? loadWithTimeout(pusdContract.balanceOf(CONTRACTS.PGOLDVault.address), 5000).catch(() => null) : Promise.resolve(null),
             ]);
 
           if (!mountedRef.current) return;
 
           const price = results[0].status === 'fulfilled' && results[0].value ? formatPrice(results[0].value) : cached?.polPrice || '0';
-          const total = results[1].status === 'fulfilled' && results[1].value ? formatBalance(results[1].value) : cached?.totalPusd || '0';
+          const totalSupply = results[1].status === 'fulfilled' && results[1].value ? formatBalance(results[1].value) : cached?.totalPusd || '0';
           const vault = results[2].status === 'fulfilled' && results[2].value ? formatBalance(results[2].value) : cached?.vaultPol || '0';
           const staked = results[3].status === 'fulfilled' && results[3].value ? formatBalance(results[3].value) : cached?.totalStaked || '0';
           const stakesCount = results[4].status === 'fulfilled' && results[4].value ? results[4].value.toString() : cached?.totalStakes || '0';
           const swapReserves = results[5].status === 'fulfilled' && results[5].value ? formatBalance(results[5].value) : cached?.swapPoolReserves || '0';
           const pusdStakedValue = results[6].status === 'fulfilled' && results[6].value ? formatBalance(results[6].value) : cached?.pusdStaked || '0';
+          
+          // PUSD trong contracts
+          const pusdInVault = results[7].status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
+          const pusdInSwap = results[8].status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
+          const pusdInPgoldVault = results[9].status === 'fulfilled' && results[9].value ? formatBalance(results[9].value) : '0';
+          
+          // PUSD mà users đang cầm = Total Supply - PUSD trong contracts
+          const pusdUsersHoldValue = Math.max(0, 
+            parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue) - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault)
+          );
 
           if (mountedRef.current) {
           setPolPrice(price);
-          setTotalPusd(total);
+          setTotalPusd(totalSupply);
           setVaultPol(vault);
           setTotalStaked(staked);
           setTotalStakes(stakesCount);
           setSwapPoolReserves(swapReserves);
           setPusdStaked(pusdStakedValue);
+          setPusdUsersHold(pusdUsersHoldValue.toString());
           
           // Cache price display for MintSection
           if (price && price !== '0') {
@@ -120,12 +132,13 @@ export default function BalanceCard() {
 
             cache.set(cacheKey, { 
               polPrice: price, 
-              totalPusd: total, 
+              totalPusd: totalSupply, 
               vaultPol: vault,
               totalStaked: staked,
               totalStakes: stakesCount,
               swapPoolReserves: swapReserves,
               pusdStaked: pusdStakedValue,
+              pusdUsersHold: pusdUsersHoldValue.toString(),
             }, 120000);
           }
 
@@ -162,7 +175,7 @@ export default function BalanceCard() {
       };
 
       loadData();
-    }, 300);
+    }, 100); // Reduced initial delay for faster load
 
     const interval = setInterval(() => {
       if (!loadingRef.current && mountedRef.current && provider) {
@@ -174,6 +187,10 @@ export default function BalanceCard() {
             const swapAddress = CONTRACTS.SwapPool.address;
             const swapABI = CONTRACTS.SwapPool.abi;
 
+            const pgoldVaultContract = CONTRACTS.PGOLDVault 
+              ? new Contract(CONTRACTS.PGOLDVault.address, CONTRACTS.PGOLDVault.abi, provider)
+              : null;
+            
             const [oracleContract, pusdContract, vaultContract, stakingContract, swapContract] = await Promise.all([
               new Contract(CONTRACTS.OraclePriceFeed.address, CONTRACTS.OraclePriceFeed.abi, provider),
               new Contract(CONTRACTS.PUSDToken.address, CONTRACTS.PUSDToken.abi, provider),
@@ -190,17 +207,32 @@ export default function BalanceCard() {
               loadWithTimeout(stakingContract.totalStakes(), 5000).catch(() => null),
               loadWithTimeout(swapContract.getBalance(), 5000).catch(() => null),
               loadWithTimeout(stakingContract.totalPUSDStaked(), 5000).catch(() => null),
+              // PUSD trong contracts để tính PUSD users đang cầm
+              loadWithTimeout(pusdContract.balanceOf(CONTRACTS.MintingVault.address), 5000).catch(() => null),
+              loadWithTimeout(pusdContract.balanceOf(CONTRACTS.SwapPool.address), 5000).catch(() => null),
+              pgoldVaultContract ? loadWithTimeout(pusdContract.balanceOf(CONTRACTS.PGOLDVault.address), 5000).catch(() => null) : Promise.resolve(null),
             ]);
 
             if (!mountedRef.current) return;
 
-            const price = results[0].status === 'fulfilled' && results[0].value ? formatPrice(results[0].value) : null;
-            const total = results[1].status === 'fulfilled' && results[1].value ? formatBalance(results[1].value) : null;
-            const vault = results[2].status === 'fulfilled' && results[2].value ? formatBalance(results[2].value) : null;
-            const staked = results[3].status === 'fulfilled' && results[3].value ? formatBalance(results[3].value) : null;
-            const stakesCount = results[4].status === 'fulfilled' && results[4].value ? results[4].value.toString() : null;
-            const swapReserves = results[5].status === 'fulfilled' && results[5].value ? formatBalance(results[5].value) : null;
-            const pusdStakedValue = results[6].status === 'fulfilled' && results[6].value ? formatBalance(results[6].value) : null;
+            const price = results[0]?.status === 'fulfilled' && results[0].value ? formatPrice(results[0].value) : null;
+            const total = results[1]?.status === 'fulfilled' && results[1].value ? formatBalance(results[1].value) : null;
+            const vault = results[2]?.status === 'fulfilled' && results[2].value ? formatBalance(results[2].value) : null;
+            const staked = results[3]?.status === 'fulfilled' && results[3].value ? formatBalance(results[3].value) : null;
+            const stakesCount = results[4]?.status === 'fulfilled' && results[4].value ? results[4].value.toString() : null;
+            const swapReserves = results[5]?.status === 'fulfilled' && results[5].value ? formatBalance(results[5].value) : null;
+            const pusdStakedValue = results[6]?.status === 'fulfilled' && results[6].value ? formatBalance(results[6].value) : null;
+            
+            // PUSD trong contracts
+      const pusdInVault = results[7]?.status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
+      const pusdInSwap = results[8]?.status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
+      const pusdInPgoldVault = results[9]?.status === 'fulfilled' && results[9].value ? formatBalance(results[9].value) : '0';
+            
+            // PUSD mà users đang cầm = Total Supply - PUSD trong contracts
+            const totalSupply = total || '0';
+            const pusdUsersHoldValue = totalSupply 
+              ? Math.max(0, parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue || '0') - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault))
+              : 0;
 
             if (mountedRef.current) {
               if (price) setPolPrice(price);
@@ -210,6 +242,7 @@ export default function BalanceCard() {
               if (stakesCount) setTotalStakes(stakesCount);
               if (swapReserves) setSwapPoolReserves(swapReserves);
               if (pusdStakedValue) setPusdStaked(pusdStakedValue);
+              setPusdUsersHold(pusdUsersHoldValue.toString());
 
               if (price && price !== '0') {
                 cache.set('pol-price-display', price, 30000);
@@ -257,7 +290,7 @@ export default function BalanceCard() {
           }
         })();
       }
-    }, 30000); // Auto-refresh every 30 seconds
+    }, 60000); // Auto-refresh every 60 seconds (reduced RPC calls)
 
     return () => {
       clearTimeout(timeoutId);
@@ -424,13 +457,7 @@ export default function BalanceCard() {
           <div className="stat-item highlight">
             <strong>TVL</strong>
             <span>
-              <TerminalNumber value={((parseFloat(vaultPol) + parseFloat(totalStaked) + parseFloat(swapPoolReserves)) * parseFloat(polPrice) + parseFloat(pusdStaked)).toFixed(2)} suffix=" USD" />
-            </span>
-          </div>
-          <div className="stat-item highlight">
-            <strong>Collateral Ratio</strong>
-            <span>
-              <TerminalNumber value={parseFloat(totalPusd) > 0 ? (((parseFloat(vaultPol) + parseFloat(totalStaked) + parseFloat(swapPoolReserves)) * parseFloat(polPrice) + parseFloat(pusdStaked)) / parseFloat(totalPusd) * 100).toFixed(1) : '0'} suffix="%" />
+              <TerminalNumber value={((parseFloat(vaultPol) + parseFloat(totalStaked) + parseFloat(swapPoolReserves)) * parseFloat(polPrice)).toFixed(2)} suffix=" USD" />
             </span>
           </div>
           <div className="stat-item">

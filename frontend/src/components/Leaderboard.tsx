@@ -3,6 +3,8 @@ import { Contract, EventLog } from 'ethers';
 import { useWeb3 } from '../hooks/useWeb3';
 import { CONTRACTS } from '../config/contracts';
 import { formatBalance } from '../utils/format';
+import { loadWithTimeout } from '../utils/loadWithTimeout';
+import { useExpandable } from '../hooks/useExpandable';
 
 interface LeaderboardEntry {
   address: string;
@@ -10,20 +12,11 @@ interface LeaderboardEntry {
   rank: number;
 }
 
-const loadWithTimeout = <T,>(promise: Promise<T>, timeout: number): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), timeout)
-    )
-  ]);
-};
-
 export default function Leaderboard() {
   const { provider } = useWeb3();
+  const { isExpanded, toggle, headerStyle, toggleIcon } = useExpandable(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isExpanded, setIsExpanded] = useState(false);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -50,19 +43,36 @@ export default function Leaderboard() {
           provider
         );
 
-        // Get contract deployment block (or use 0 to search from beginning)
+        // Query from recent blocks only (last 100k blocks ~2 weeks) for faster loading
+        // This ensures we get recent stakers without querying entire history
         const currentBlock = await provider.getBlockNumber();
-        const fromBlock = Math.max(0, currentBlock - 100000); // Last ~100k blocks
+        const fromBlock = Math.max(0, currentBlock - 100000); // Last 100k blocks only
 
-        // Query all Staked events to get all users
+        // Query all Staked events (POL staking)
         const stakedEvents = await loadWithTimeout(
           stakingContract.queryFilter(stakingContract.filters.Staked(), fromBlock, currentBlock),
           30000
         ).catch(() => []);
 
-        // Get unique users
+        // Query all PUSDStaked events (PUSD staking)
+        const pusdStakedEvents = await loadWithTimeout(
+          stakingContract.queryFilter(stakingContract.filters.PUSDStaked(), fromBlock, currentBlock),
+          30000
+        ).catch(() => []);
+
+        // Get unique users from both event types
         const userSet = new Set<string>();
+        
+        // Add users from POL staking events
         for (const event of stakedEvents) {
+          const log = event as EventLog;
+          if (log.args && log.args.user) {
+            userSet.add(log.args.user.toString());
+          }
+        }
+        
+        // Add users from PUSD staking events
+        for (const event of pusdStakedEvents) {
           const log = event as EventLog;
           if (log.args && log.args.user) {
             userSet.add(log.args.user.toString());
@@ -128,8 +138,8 @@ export default function Leaderboard() {
 
   return (
     <div className="section leaderboard-section">
-      <h2 onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-        Leaderboard {isExpanded ? '▼' : '▶'}
+      <h2 onClick={toggle} style={headerStyle}>
+        Leaderboard {toggleIcon}
       </h2>
       {isExpanded && (
         <>
@@ -157,10 +167,7 @@ export default function Leaderboard() {
                     className={`leaderboard-row ${entry.rank <= 3 ? 'top-three' : ''}`}
                   >
                     <div className="rank-col">
-                      {entry.rank === 1 && '🥇'}
-                      {entry.rank === 2 && '🥈'}
-                      {entry.rank === 3 && '🥉'}
-                      {entry.rank > 3 && `#${entry.rank}`}
+                      #{entry.rank}
                     </div>
                     <div className="address-col">
                       <span className="address-text">{formatAddress(entry.address)}</span>

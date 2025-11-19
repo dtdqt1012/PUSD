@@ -43,6 +43,8 @@ const introBlocks: ContentBlock[] = [
       { text: '  • Staking rewards with lock periods (30, 60, 120, 365 days)', type: 'output' },
       { text: '  • Swap pool for POL ↔ PUSD exchange', type: 'output' },
       { text: '  • Real-time price feed via Chainlink Oracle', type: 'output' },
+      { text: '  • PGOLD - Real World Asset backed by gold', type: 'output' },
+      { text: '  • Mint/Redeem PGOLD using PUSD', type: 'output' },
     ],
     delay: 500
   },
