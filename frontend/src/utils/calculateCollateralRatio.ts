@@ -10,7 +10,7 @@
  */
 export function calculateCollateralRatio(
   polInVault: bigint,
-  polInSwapPool: bigint,
+  _polInSwapPool: bigint, // Unused parameter - kept for API compatibility
   polPrice: bigint,
   pusdSupply: bigint
 ): number {
@@ -54,7 +54,7 @@ export function calculateCollateralRatio(
  */
 export function calculateCollateralRatioFromFormatted(
   vaultPol: string,
-  swapPoolPol: string,
+  _swapPoolPol: string, // Unused parameter - kept for API compatibility
   polPrice: string,
   pusdSupply: string
 ): number {

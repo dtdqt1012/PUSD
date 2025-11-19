@@ -68,10 +68,10 @@ function ProjectInfo() {
         const pusdInSwap = results[7].status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
         const pusdInPgoldVault = results[8].status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
         
-        // PUSD mà users đang cầm = Total Supply - PUSD trong contracts
-        const pusdUsersHold = Math.max(0, 
-          parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue) - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault)
-        );
+        // PUSD mà users đang cầm = Total Supply - PUSD trong contracts (calculated but not used)
+        // const pusdUsersHold = Math.max(0, 
+        //   parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue) - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault)
+        // );
 
         setPolPrice(price);
         setTotalPusd(totalSupply); // Vẫn hiển thị total supply

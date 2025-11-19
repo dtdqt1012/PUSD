@@ -151,22 +151,22 @@ export function useCollateralRatio(refreshInterval: number = 30000) {
           pusdInSwap_wei: pusdInSwap.toString(),
           pusdInPgoldVault_wei: pusdInPgoldVault.toString(),
           // Formatted values
-          polInVault: formatBalance(polInVault.toString()),
-          polInSwapPool: formatBalance(polInSwapPool.toString()),
-          polPrice: formatPrice(polPrice.toString()),
-          polValueUSD: formatBalance(polValueUSD.toString()),
-          poolReservesUSD: formatBalance(poolReservesUSD.toString()),
-          totalPusdSupply: formatBalance(totalPusdSupply.toString()),
-          pusdInVault: formatBalance(pusdInVault.toString()),
-          pusdInStaking: formatBalance(pusdInStaking.toString()),
-          pusdInSwap: formatBalance(pusdInSwap.toString()),
-          pusdInPgoldVault: formatBalance(pusdInPgoldVault.toString()),
-          pusdUsersHold: formatBalance(pusdUsersHold.toString()),
-          denominator: formatBalance(denominator.toString()),
-          finalPusdSupply: formatBalance(finalPusdSupply.toString()),
+          polInVault: formatBalance(polInVault),
+          polInSwapPool: formatBalance(polInSwapPool),
+          polPrice: formatPrice(polPrice),
+          polValueUSD: formatBalance(polValueUSD),
+          poolReservesUSD: formatBalance(poolReservesUSD),
+          totalPusdSupply: formatBalance(totalPusdSupply),
+          pusdInVault: formatBalance(pusdInVault),
+          pusdInStaking: formatBalance(pusdInStaking),
+          pusdInSwap: formatBalance(pusdInSwap),
+          pusdInPgoldVault: formatBalance(pusdInPgoldVault),
+          pusdUsersHold: formatBalance(pusdUsersHold),
+          denominator: formatBalance(denominator),
+          finalPusdSupply: formatBalance(finalPusdSupply),
           ratio: ratio.toFixed(2) + '%',
           // Calculation breakdown
-          calculation: `(${formatBalance(polInVault.toString())} POL × $${formatPrice(polPrice.toString())}) / (${formatBalance(pusdUsersHold.toString())} PUSD + ${formatBalance(poolReservesUSD.toString())} USD) × 100 = ${ratio.toFixed(2)}%`,
+          calculation: `(${formatBalance(polInVault)} POL × $${formatPrice(polPrice)}) / (${formatBalance(pusdUsersHold)} PUSD + ${formatBalance(poolReservesUSD)} USD) × 100 = ${ratio.toFixed(2)}%`,
         });
 
         setData({
@@ -197,11 +197,11 @@ export function useCollateralRatio(refreshInterval: number = 30000) {
   // Formatted values for display
   const formatted = {
     ratio: isNaN(data.ratio) || !isFinite(data.ratio) ? '0.00' : data.ratio.toFixed(2),
-    polInVault: formatBalance(data.polInVault.toString()),
-    polInSwapPool: formatBalance(data.polInSwapPool.toString()),
-    polPrice: formatPrice(data.polPrice.toString()),
-    pusdSupply: formatBalance(data.pusdSupply.toString()),
-    polValueUSD: formatBalance(data.polValueUSD.toString()),
+    polInVault: formatBalance(data.polInVault),
+    polInSwapPool: formatBalance(data.polInSwapPool),
+    polPrice: formatPrice(data.polPrice),
+    pusdSupply: formatBalance(data.pusdSupply),
+    polValueUSD: formatBalance(data.polValueUSD),
   };
 
   return {

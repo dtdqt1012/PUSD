@@ -22,7 +22,7 @@ export default function BalanceCard() {
   const [totalStakes, setTotalStakes] = useState<string>('0');
   const [swapPoolReserves, setSwapPoolReserves] = useState<string>('0');
   const [pusdStaked, setPusdStaked] = useState<string>('0');
-  const [pusdUsersHold, setPusdUsersHold] = useState<string>('0'); // PUSD mà users đang cầm
+  // const [pusdUsersHold, setPusdUsersHold] = useState<string>('0'); // PUSD mà users đang cầm - not used
   const [claimableRewards, setClaimableRewards] = useState<string>('0');
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false);
@@ -123,7 +123,7 @@ export default function BalanceCard() {
           setTotalStakes(stakesCount);
           setSwapPoolReserves(swapReserves);
           setPusdStaked(pusdStakedValue);
-          setPusdUsersHold(pusdUsersHoldValue.toString());
+          // setPusdUsersHold(pusdUsersHoldValue.toString()); // Not used
           
           // Cache price display for MintSection
           if (price && price !== '0') {
@@ -138,7 +138,6 @@ export default function BalanceCard() {
               totalStakes: stakesCount,
               swapPoolReserves: swapReserves,
               pusdStaked: pusdStakedValue,
-              pusdUsersHold: pusdUsersHoldValue.toString(),
             }, 120000);
           }
 
@@ -242,7 +241,7 @@ export default function BalanceCard() {
               if (stakesCount) setTotalStakes(stakesCount);
               if (swapReserves) setSwapPoolReserves(swapReserves);
               if (pusdStakedValue) setPusdStaked(pusdStakedValue);
-              setPusdUsersHold(pusdUsersHoldValue.toString());
+              // setPusdUsersHold(pusdUsersHoldValue.toString()); // Not used
 
               if (price && price !== '0') {
                 cache.set('pol-price-display', price, 30000);

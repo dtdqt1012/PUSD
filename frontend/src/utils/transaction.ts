@@ -37,8 +37,10 @@ export async function executeTransaction(
         // Silently fallback to block-based estimation
         try {
           const block = await signer.provider!.getBlock('latest');
-          if (block && block.gasPrice) {
-            finalGasPrice = block.gasPrice * 120n / 100n;
+          // In ethers v6, Block type may not have gasPrice, use type assertion
+          const blockWithGasPrice = block as any;
+          if (block && blockWithGasPrice.gasPrice) {
+            finalGasPrice = BigInt(blockWithGasPrice.gasPrice.toString()) * 120n / 100n;
           } else {
             // If block doesn't have gasPrice, let MetaMask handle it
             finalGasPrice = undefined;
@@ -51,8 +53,10 @@ export async function executeTransaction(
         // Other errors: try block-based estimation as fallback
         try {
           const block = await signer.provider!.getBlock('latest');
-          if (block && block.gasPrice) {
-            finalGasPrice = block.gasPrice * 120n / 100n;
+          // In ethers v6, Block type may not have gasPrice, use type assertion
+          const blockWithGasPrice = block as any;
+          if (block && blockWithGasPrice.gasPrice) {
+            finalGasPrice = BigInt(blockWithGasPrice.gasPrice.toString()) * 120n / 100n;
           } else {
             finalGasPrice = undefined;
           }
