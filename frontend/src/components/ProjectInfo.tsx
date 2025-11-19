@@ -63,10 +63,10 @@ function ProjectInfo() {
         const swapReserves = results[4].status === 'fulfilled' && results[4].value ? formatBalance(results[4].value) : '0';
         const pusdStakedValue = results[5].status === 'fulfilled' && results[5].value ? formatBalance(results[5].value) : '0';
         
-        // Tính PUSD trong contracts
-        const pusdInVault = results[6].status === 'fulfilled' && results[6].value ? formatBalance(results[6].value) : '0';
-        const pusdInSwap = results[7].status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
-        const pusdInPgoldVault = results[8].status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
+        // Tính PUSD trong contracts (calculated but not used)
+        // const pusdInVault = results[6].status === 'fulfilled' && results[6].value ? formatBalance(results[6].value) : '0';
+        // const pusdInSwap = results[7].status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
+        // const pusdInPgoldVault = results[8].status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
         
         // PUSD mà users đang cầm = Total Supply - PUSD trong contracts (calculated but not used)
         // const pusdUsersHold = Math.max(0, 

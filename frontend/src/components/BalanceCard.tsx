@@ -110,10 +110,10 @@ export default function BalanceCard() {
           const pusdInSwap = results[8].status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
           const pusdInPgoldVault = results[9].status === 'fulfilled' && results[9].value ? formatBalance(results[9].value) : '0';
           
-          // PUSD mà users đang cầm = Total Supply - PUSD trong contracts
-          const pusdUsersHoldValue = Math.max(0, 
-            parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue) - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault)
-          );
+          // PUSD mà users đang cầm = Total Supply - PUSD trong contracts (calculated but not used)
+          // const pusdUsersHoldValue = Math.max(0, 
+          //   parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue) - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault)
+          // );
 
           if (mountedRef.current) {
           setPolPrice(price);
@@ -222,16 +222,16 @@ export default function BalanceCard() {
             const swapReserves = results[5]?.status === 'fulfilled' && results[5].value ? formatBalance(results[5].value) : null;
             const pusdStakedValue = results[6]?.status === 'fulfilled' && results[6].value ? formatBalance(results[6].value) : null;
             
-            // PUSD trong contracts
-      const pusdInVault = results[7]?.status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
-      const pusdInSwap = results[8]?.status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
-      const pusdInPgoldVault = results[9]?.status === 'fulfilled' && results[9].value ? formatBalance(results[9].value) : '0';
+            // PUSD trong contracts (calculated but not used)
+            // const pusdInVault = results[7]?.status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
+            // const pusdInSwap = results[8]?.status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
+            // const pusdInPgoldVault = results[9]?.status === 'fulfilled' && results[9].value ? formatBalance(results[9].value) : '0';
             
-            // PUSD mà users đang cầm = Total Supply - PUSD trong contracts
-            const totalSupply = total || '0';
-            const pusdUsersHoldValue = totalSupply 
-              ? Math.max(0, parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue || '0') - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault))
-              : 0;
+            // PUSD mà users đang cầm = Total Supply - PUSD trong contracts (calculated but not used)
+            // const totalSupply = total || '0';
+            // const pusdUsersHoldValue = totalSupply 
+            //   ? Math.max(0, parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue || '0') - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault))
+            //   : 0;
 
             if (mountedRef.current) {
               if (price) setPolPrice(price);
