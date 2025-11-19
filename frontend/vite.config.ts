@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     port: 3000,
     headers: {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; connect-src 'self' https://polygon-rpc.com https://*.polygon-rpc.com wss://*.polygon-rpc.com https://va.vercel-scripts.com https://api.coingecko.com https://gasstation.polygon.technology;"
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.vercel.app; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; connect-src 'self' https://polygon-rpc.com https://*.polygon-rpc.com wss://*.polygon-rpc.com https://va.vercel-scripts.com https://*.vercel.app https://api.coingecko.com https://gasstation.polygon.technology;"
     },
     fs: {
       allow: ['..'],
