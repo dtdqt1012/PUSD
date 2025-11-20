@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // Important for Electron - use relative paths
+  base: './',
   server: {
     port: 3000,
     headers: {
@@ -32,7 +32,6 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ethers-vendor': ['ethers'],
-          'three-vendor': ['three'],
         },
         // Optimize chunk file names
         chunkFileNames: 'js/[name]-[hash].js',
@@ -51,23 +50,15 @@ export default defineConfig({
       },
     },
     chunkSizeWarningLimit: 1000,
-    // Enable source maps for debugging (optional, can disable in production)
     sourcemap: false,
-    // Optimize asset inlining threshold
-    assetsInlineLimit: 4096, // 4kb
-    // CSS code splitting
+    assetsInlineLimit: 4096,
     cssCodeSplit: true,
-    // Report compressed size
     reportCompressedSize: true,
   },
   optimizeDeps: {
     include: ['ethers', 'react', 'react-dom', 'react-router-dom'],
-    // Exclude large dependencies from pre-bundling if needed
     exclude: [],
-    // Force optimization
-    force: true,
   },
-  // Enable CSS code splitting
   css: {
     devSourcemap: false,
   },

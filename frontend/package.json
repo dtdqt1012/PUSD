@@ -1,75 +1,28 @@
 {
   "name": "pusd-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "POLYGON USD - Decentralized, over-collateralized stablecoin native to Polygon blockchain",
+  "author": "PUSD Team",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
-    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
-    "electron:build:win": "npm run build && electron-builder --win",
-    "capacitor:init": "npx cap init",
-    "capacitor:add:android": "npx cap add android",
-    "capacitor:sync": "npx cap sync",
-    "capacitor:open:android": "npx cap open android",
-    "capacitor:build:android": "npm run build && npx cap sync && npx cap open android"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@react-three/fiber": "^8.18.0",
-    "@vercel/analytics": "^1.5.0",
-    "chart.js": "^4.5.1",
     "ethers": "^6.15.0",
     "react": "^18.3.1",
-    "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.9.5",
-    "three": "^0.181.0"
+    "react-router-dom": "^7.9.5"
   },
   "devDependencies": {
-    "@capacitor/android": "^6.2.1",
-    "@capacitor/cli": "^6.2.1",
-    "@capacitor/core": "^6.2.1",
-    "@types/chart.js": "^2.9.41",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/react-router-dom": "^5.3.3",
-    "@types/three": "^0.181.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "concurrently": "^8.2.2",
-    "electron": "^30.5.1",
-    "electron-builder": "^24.13.3",
     "terser": "^5.44.1",
     "typescript": "^5.5.3",
-    "vite": "^5.4.2",
-    "wait-on": "^7.2.0"
-  },
-  "main": "electron/main.js",
-  "build": {
-    "appId": "com.pusd.polygonusd",
-    "productName": "POLYGON USD",
-    "directories": {
-      "output": "dist-electron"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "electron/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
+    "vite": "^5.4.2"
   }
 }

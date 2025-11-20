@@ -81,6 +81,11 @@ export async function executeTransaction(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      // For approve transactions, add a small delay to allow MetaMask to show warning properly
+      if (methodName === 'approve') {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
       const tx = await contract[methodName](...args, txOptions);
       await tx.wait();
       return tx;

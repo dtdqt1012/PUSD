@@ -61,13 +61,11 @@ export default function SwapSection() {
           const [pusdAmount, swapFee] = await swapContract.getPOLtoPUSDQuote(polWei);
           setQuote(formatBalance(pusdAmount));
           setFee(formatBalance(swapFee));
-          void swapFee; // Suppress unused warning
         } else {
           const pusdWei = parseAmount(amount);
           const [polAmount, swapFee] = await swapContract.getPUSDtoPOLQuote(pusdWei);
           setQuote(formatBalance(polAmount));
           setFee(formatBalance(swapFee));
-          void swapFee; // Suppress unused warning
         }
       } catch (error) {
         console.error('Failed to calculate quote:', error);
