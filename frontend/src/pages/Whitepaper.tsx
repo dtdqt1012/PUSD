@@ -71,9 +71,8 @@ export default function Whitepaper() {
               <a href="#tokenomics">5. Tokenomics</a>
               <a href="#security">6. Security & Risk Management</a>
               <a href="#governance">7. Governance</a>
-              <a href="#roadmap">8. Roadmap</a>
-              <a href="#usecases">9. Use Cases</a>
-              <a href="#conclusion">10. Conclusion</a>
+              <a href="#usecases">8. Use Cases</a>
+              <a href="#conclusion">9. Conclusion</a>
             </nav>
           </section>
 
@@ -415,7 +414,7 @@ export default function Whitepaper() {
               <li>Functions: Fee adjustments, oracle settings, emergency controls</li>
             </ul>
 
-            <h3>7.2 Future Governance (Roadmap)</h3>
+            <h3>7.2 Future Governance</h3>
             <ul>
               <li>Transition to decentralized governance</li>
               <li>Token holders vote on proposals</li>
@@ -424,53 +423,9 @@ export default function Whitepaper() {
             </ul>
           </section>
 
-          {/* 8. Roadmap */}
-          <section id="roadmap" className="whitepaper-section">
-            <h2 className="section-title">8. Roadmap</h2>
-            
-            <h3>Phase 1: Foundation ✅ (Completed)</h3>
-            <ul>
-              <li>Core smart contracts deployed</li>
-              <li>Minting & redeeming functionality</li>
-              <li>Staking system operational</li>
-              <li>Swap functionality live</li>
-              <li>Frontend DApp launched</li>
-            </ul>
-
-            <h3>Phase 2: Growth (Current)</h3>
-            <ul>
-              <li>Community building</li>
-              <li>Marketing expansion</li>
-              <li>Liquidity incentives</li>
-              <li>User acquisition</li>
-            </ul>
-
-            <h3>Phase 3: Ecosystem</h3>
-            <ul>
-              <li>Dedicated DEX</li>
-              <li>PUSD trading pairs</li>
-              <li>Token launchpads</li>
-              <li>Advanced features</li>
-            </ul>
-
-            <h3>Phase 4: Integration</h3>
-            <ul>
-              <li>Stablecoin bridge network</li>
-              <li>Multi-chain compatibility</li>
-              <li>Airdrop program for stakers</li>
-              <li>Partner integrations</li>
-            </ul>
-
-            <h3>Phase 5: Fiat Integration</h3>
-            <ul>
-              <li>Cross-border fiat payments (Visa)</li>
-              <li>PUSD Credit Card</li>
-            </ul>
-          </section>
-
-          {/* 9. Use Cases */}
+          {/* 8. Use Cases */}
           <section id="usecases" className="whitepaper-section">
-            <h2 className="section-title">9. Use Cases</h2>
+            <h2 className="section-title">8. Use Cases</h2>
             
             <h3>9.1 For Users</h3>
             <ul>
@@ -487,9 +442,9 @@ export default function Whitepaper() {
             </ul>
           </section>
 
-          {/* 10. Conclusion */}
+          {/* 9. Conclusion */}
           <section id="conclusion" className="whitepaper-section">
-            <h2 className="section-title">10. Conclusion</h2>
+            <h2 className="section-title">9. Conclusion</h2>
             
             <p>
               PUSD represents a significant step forward for the Polygon ecosystem by providing a native, decentralized, 

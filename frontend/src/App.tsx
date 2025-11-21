@@ -7,9 +7,9 @@ import './index.css';
 // Lazy load pages for better performance
 const Intro = lazy(() => import('./pages/Intro'));
 const Home = lazy(() => import('./pages/Home'));
-const Roadmap = lazy(() => import('./pages/Roadmap'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const Whitepaper = lazy(() => import('./pages/Whitepaper'));
+const PFUN = lazy(() => import('./pages/PFUN'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -41,12 +41,6 @@ function Navigation() {
             Home
           </Link>
           <Link 
-            to="/roadmap" 
-            className={`nav-link ${location.pathname === '/roadmap' ? 'active' : ''}`}
-          >
-            Roadmap
-          </Link>
-          <Link 
             to="/faq" 
             className={`nav-link ${location.pathname === '/faq' ? 'active' : ''}`}
           >
@@ -57,6 +51,12 @@ function Navigation() {
             className={`nav-link ${location.pathname === '/whitepaper' ? 'active' : ''}`}
           >
             Whitepaper
+          </Link>
+          <Link 
+            to="/pfun" 
+            className={`nav-link ${location.pathname === '/pfun' ? 'active' : ''}`}
+          >
+            PFUN
           </Link>
           <Link to="/app" className="nav-link nav-link-app">
             PUSD App
@@ -97,14 +97,6 @@ function App() {
             } 
           />
           <Route 
-            path="/roadmap" 
-            element={
-              <Layout>
-                <Roadmap />
-              </Layout>
-            } 
-          />
-          <Route 
             path="/faq" 
             element={
               <Layout>
@@ -117,6 +109,14 @@ function App() {
             element={
               <Layout>
                 <Whitepaper />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/pfun" 
+            element={
+              <Layout>
+                <PFUN />
               </Layout>
             } 
           />

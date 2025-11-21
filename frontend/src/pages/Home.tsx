@@ -24,8 +24,8 @@ export default function Home() {
             <Link to="/app" className="btn-primary">
               Launch DApp
             </Link>
-            <Link to="/roadmap" className="btn-secondary">
-              View Roadmap
+            <Link to="/pfun" className="btn-secondary">
+              PFUN
             </Link>
             <Link to="/whitepaper" className="btn-secondary">
               Read Whitepaper
@@ -51,7 +51,19 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="features-section">
+        <div className="features-section">
+          <div className="section-header">
+            <h2 className="section-title">PFUN</h2>
+            <p className="section-subtitle">
+              Launch your meme token with PUSD. Create, trade, and grow your community.
+            </p>
+            <Link to="/pfun" className="btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
+              Launch Your Token →
+            </Link>
+          </div>
+        </div>
+        
+        <div className="features-section">
         <div className="section-header">
           <h2 className="section-title">
             <span className="terminal-prompt">&gt;</span>

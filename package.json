@@ -6,6 +6,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "test:pfun": "hardhat test test/PFUN*.test.js",
     "deploy": "hardhat run scripts/deploy-all.js",
     "deploy:polygon": "hardhat run scripts/deploy-all.js --network polygon",
     "verify:all": "hardhat run scripts/verify-all.js --network polygon",

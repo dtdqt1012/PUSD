@@ -43,22 +43,40 @@ export default function Leaderboard() {
           provider
         );
 
-        // Query from recent blocks only (last 100k blocks ~2 weeks) for faster loading
-        // This ensures we get recent stakers without querying entire history
+        // Query from block 0 to get ALL stakers (including old ones who haven't staked recently)
         const currentBlock = await provider.getBlockNumber();
-        const fromBlock = Math.max(0, currentBlock - 100000); // Last 100k blocks only
+        const fromBlock = 0; // Query from beginning to get all users
 
-        // Query all Staked events (POL staking)
+        // Query all Staked events (POL staking) - from beginning
+        // Use longer timeout for full history query
         const stakedEvents = await loadWithTimeout(
           stakingContract.queryFilter(stakingContract.filters.Staked(), fromBlock, currentBlock),
-          30000
-        ).catch(() => []);
+          120000 // 2 minutes timeout for full history
+        ).catch((error) => {
+          console.warn('Staked events query timeout or error:', error);
+          // Fallback: try from last 500k blocks if full query fails
+          const fallbackFromBlock = Math.max(0, currentBlock - 500000);
+          return stakingContract.queryFilter(
+            stakingContract.filters.Staked(), 
+            fallbackFromBlock, 
+            currentBlock
+          ).catch(() => []);
+        });
 
-        // Query all PUSDStaked events (PUSD staking)
+        // Query all PUSDStaked events (PUSD staking) - from beginning
         const pusdStakedEvents = await loadWithTimeout(
           stakingContract.queryFilter(stakingContract.filters.PUSDStaked(), fromBlock, currentBlock),
-          30000
-        ).catch(() => []);
+          120000 // 2 minutes timeout for full history
+        ).catch((error) => {
+          console.warn('PUSDStaked events query timeout or error:', error);
+          // Fallback: try from last 500k blocks if full query fails
+          const fallbackFromBlock = Math.max(0, currentBlock - 500000);
+          return stakingContract.queryFilter(
+            stakingContract.filters.PUSDStaked(), 
+            fallbackFromBlock, 
+            currentBlock
+          ).catch(() => []);
+        });
 
         // Get unique users from both event types
         const userSet = new Set<string>();
@@ -67,7 +85,7 @@ export default function Leaderboard() {
         for (const event of stakedEvents) {
           const log = event as EventLog;
           if (log.args && log.args.user) {
-            userSet.add(log.args.user.toString());
+            userSet.add(log.args.user.toString().toLowerCase());
           }
         }
         
@@ -75,9 +93,10 @@ export default function Leaderboard() {
         for (const event of pusdStakedEvents) {
           const log = event as EventLog;
           if (log.args && log.args.user) {
-            userSet.add(log.args.user.toString());
+            userSet.add(log.args.user.toString().toLowerCase());
           }
         }
+
 
         const users = Array.from(userSet);
 
@@ -179,8 +198,22 @@ export default function Leaderboard() {
                         Copy
                       </button>
                     </div>
-                    <div className="points-col">
-                      <strong>{parseFloat(entry.points).toFixed(2)}</strong>
+                    <div className="points-col" style={{ textAlign: 'right' }}>
+                      <strong style={{ fontSize: '1.1rem', color: 'var(--text-green)' }}>
+                        {(() => {
+                          const pointsNum = parseFloat(entry.points);
+                          if (pointsNum >= 1000000) {
+                            return `${(pointsNum / 1000000).toFixed(2)}M`;
+                          } else if (pointsNum >= 1000) {
+                            return `${(pointsNum / 1000).toFixed(2)}K`;
+                          } else {
+                            return pointsNum.toLocaleString(undefined, { 
+                              maximumFractionDigits: 2,
+                              minimumFractionDigits: pointsNum < 1 ? 2 : 0
+                            });
+                          }
+                        })()}
+                      </strong>
                     </div>
                   </div>
                 ))}

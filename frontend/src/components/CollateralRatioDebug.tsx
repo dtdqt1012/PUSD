@@ -88,7 +88,7 @@ export default function CollateralRatioDebug() {
           marginTop: '1rem'
         }}>
           <h4 style={{ color: '#ffa500', marginBottom: '0.5rem' }}>
-            ⚠️ To reach 110% Collateral Ratio:
+            To reach 110% Collateral Ratio:
           </h4>
           <div style={{ display: 'grid', gap: '0.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>

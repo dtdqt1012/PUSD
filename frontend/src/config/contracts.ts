@@ -7,6 +7,10 @@ import RewardDistributorABI from '../abis/RewardDistributor.json';
 import PGOLDTokenABI from '../abis/PGOLDToken.json';
 import PGOLDVaultABI from '../abis/PGOLDVault.json';
 import GoldOracleABI from '../abis/GoldOracle.json';
+import TokenFactoryABI from '../abis/TokenFactory.json';
+import PFUNLaunchpadABI from '../abis/PFUNLaunchpad.json';
+import PFUNBondingCurveABI from '../abis/PFUNBondingCurve.json';
+import PFUNCollateralLockABI from '../abis/PFUNCollateralLock.json';
 
 export const CONTRACT_ADDRESSES = {
   oracle: '0x2af4468A497Faed609be0e0c56b76d364a158A75',
@@ -19,6 +23,11 @@ export const CONTRACT_ADDRESSES = {
   goldOracle: '0x099aC141F32460a194Dc0b613DA23c9b95A19Cc9',
   pgoldToken: '0xf24418259AbA83D59a86343bfAd50dd5De71F850',
   pgoldVault: '0xA2d090dE61bAa666430E2C197C06e5139226B2D2',
+  // PFUN Contracts (v4 - 2000 chars logo limit, data URL support)
+  tokenFactory: '0x7FA374FD18F14f27Dbd389631795669Bb1b7dde6',
+  pfunLaunchpad: '0xdb5f5b4d3ce38247692DbC11640Df9633E789406',
+  pfunBondingCurve: '0x9441D35C5a5987622E51e6d1179FB48327Aa05a6',
+  pfunCollateralLock: '0xC14Cf34dbe04D0e825EBEe34508a4938CD6b325E',
 };
 
 export const NETWORK_CONFIG = {
@@ -63,6 +72,23 @@ export const CONTRACTS = {
   GoldOracle: {
     address: CONTRACT_ADDRESSES.goldOracle,
     abi: GoldOracleABI,
+  },
+  // PFUN Contracts
+  TokenFactory: {
+    address: CONTRACT_ADDRESSES.tokenFactory,
+    abi: TokenFactoryABI,
+  },
+  PFUNLaunchpad: {
+    address: CONTRACT_ADDRESSES.pfunLaunchpad,
+    abi: PFUNLaunchpadABI,
+  },
+  PFUNBondingCurve: {
+    address: CONTRACT_ADDRESSES.pfunBondingCurve,
+    abi: PFUNBondingCurveABI,
+  },
+  PFUNCollateralLock: {
+    address: CONTRACT_ADDRESSES.pfunCollateralLock,
+    abi: PFUNCollateralLockABI,
   },
 };
 
