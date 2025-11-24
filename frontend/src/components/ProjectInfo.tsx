@@ -11,9 +11,6 @@ function ProjectInfo() {
   const { provider } = useWeb3();
   const [polPrice, setPolPrice] = useState<string>('0');
   const [totalPusd, setTotalPusd] = useState<string>('0');
-  const [vaultPol, setVaultPol] = useState<string>('0');
-  const [totalStaked, setTotalStaked] = useState<string>('0');
-  const [swapPoolReserves, setSwapPoolReserves] = useState<string>('0');
   const [pusdStaked, setPusdStaked] = useState<string>('0');
   const { isExpanded, toggle, headerStyle, toggleIcon } = useExpandable(true);
   const mountedRef = useRef(true);
@@ -59,26 +56,10 @@ function ProjectInfo() {
 
         const price = results[0].status === 'fulfilled' && results[0].value ? formatPrice(results[0].value) : '0';
         const totalSupply = results[1].status === 'fulfilled' && results[1].value ? formatBalance(results[1].value) : '0';
-        const vault = results[2].status === 'fulfilled' && results[2].value ? formatBalance(results[2].value) : '0';
-        const staked = results[3].status === 'fulfilled' && results[3].value ? formatBalance(results[3].value) : '0';
-        const swapReserves = results[4].status === 'fulfilled' && results[4].value ? formatBalance(results[4].value) : '0';
         const pusdStakedValue = results[5].status === 'fulfilled' && results[5].value ? formatBalance(results[5].value) : '0';
-        
-        // Tính PUSD trong contracts (calculated but not used)
-        // const pusdInVault = results[6].status === 'fulfilled' && results[6].value ? formatBalance(results[6].value) : '0';
-        // const pusdInSwap = results[7].status === 'fulfilled' && results[7].value ? formatBalance(results[7].value) : '0';
-        // const pusdInPgoldVault = results[8].status === 'fulfilled' && results[8].value ? formatBalance(results[8].value) : '0';
-        
-        // PUSD mà users đang cầm = Total Supply - PUSD trong contracts (calculated but not used)
-        // const pusdUsersHold = Math.max(0, 
-        //   parseFloat(totalSupply) - parseFloat(pusdInVault) - parseFloat(pusdStakedValue) - parseFloat(pusdInSwap) - parseFloat(pusdInPgoldVault)
-        // );
 
         setPolPrice(price);
-        setTotalPusd(totalSupply); // Vẫn hiển thị total supply
-        setVaultPol(vault);
-        setTotalStaked(staked);
-        setSwapPoolReserves(swapReserves);
+        setTotalPusd(totalSupply);
         setPusdStaked(pusdStakedValue);
       } catch (error) {
         console.error('Failed to load stats:', error);
