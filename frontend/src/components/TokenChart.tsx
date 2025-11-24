@@ -16,7 +16,7 @@ interface TokenChartProps {
   launchTimestamp?: number; // Optional: timestamp when token was launched
 }
 
-export default function TokenChart({ tokenAddress, height = 300, launchTimestamp }: TokenChartProps) {
+export default function TokenChart({ tokenAddress, height = 300, launchTimestamp: _launchTimestamp }: TokenChartProps) {
   const { provider } = useWeb3();
   const [priceData, setPriceData] = useState<PricePoint[]>([]);
   const [loading, setLoading] = useState(true);

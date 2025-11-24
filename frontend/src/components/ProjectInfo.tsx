@@ -90,10 +90,6 @@ function ProjectInfo() {
     return () => clearInterval(interval);
   }, [provider]);
 
-  // TVL = Tất cả POL đang lock (Vault + Staking + Swap Pool) * POL Price
-  const tvl = (parseFloat(vaultPol) + parseFloat(totalStaked) + parseFloat(swapPoolReserves)) * parseFloat(polPrice);
-  
-
   return (
     <div className="section project-info">
       <h2 onClick={toggle} style={headerStyle}>

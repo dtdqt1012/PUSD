@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { Contract } from 'ethers';
 import { useWeb3 } from '../hooks/useWeb3';
 import { CONTRACTS } from '../config/contracts';
@@ -140,7 +140,6 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
         });
         
         // Also add daily samples to ensure we have data points even if no events
-        const sampleInterval = 1;
         const totalPoints = daysToQuery + 1;
         for (let i = 0; i < totalPoints; i++) {
           const targetBlock = startBlock + (i * blocksPerDay);
@@ -154,7 +153,6 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
       } catch (error) {
         console.warn('Failed to query events, falling back to daily sampling:', error);
         // Fallback: just use daily sampling
-        const sampleInterval = 1;
         const totalPoints = daysToQuery + 1;
         for (let i = 0; i < totalPoints; i++) {
           const targetBlock = startBlock + (i * blocksPerDay);
