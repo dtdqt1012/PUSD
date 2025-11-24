@@ -5,6 +5,7 @@ import { CONTRACTS } from '../config/contracts';
 import { formatBalance, formatPrice } from '../utils/format';
 import { loadWithTimeout } from '../utils/loadWithTimeout';
 import { useExpandable } from '../hooks/useExpandable';
+import TVLChart from './TVLChart';
 
 function ProjectInfo() {
   const { provider } = useWeb3();
@@ -89,7 +90,6 @@ function ProjectInfo() {
     return () => clearInterval(interval);
   }, [provider]);
 
-  const marketCap = parseFloat(totalPusd) * parseFloat(polPrice);
   // TVL = Tất cả POL đang lock (Vault + Staking + Swap Pool) * POL Price
   const tvl = (parseFloat(vaultPol) + parseFloat(totalStaked) + parseFloat(swapPoolReserves)) * parseFloat(polPrice);
   
@@ -113,19 +113,16 @@ function ProjectInfo() {
                 <strong>Total PUSD</strong>
                 <span>{parseFloat(totalPusd).toFixed(2)}</span>
               </div>
-              <div className="stat-item highlight">
-                <strong>Market Cap</strong>
-                <span>${marketCap.toFixed(2)}</span>
-              </div>
-              <div className="stat-item highlight">
-                <strong>TVL</strong>
-                <span>${tvl.toFixed(2)}</span>
-              </div>
               <div className="stat-item">
                 <strong>PUSD Staked</strong>
                 <span>{parseFloat(pusdStaked).toFixed(2)}</span>
               </div>
             </div>
+          </div>
+
+          <div className="info-section compact">
+            <h3>TVL Chart</h3>
+            <TVLChart height={250} />
           </div>
 
           <div className="info-section compact">

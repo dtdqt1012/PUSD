@@ -72,7 +72,8 @@ export default function Whitepaper() {
               <a href="#security">6. Security & Risk Management</a>
               <a href="#governance">7. Governance</a>
               <a href="#usecases">8. Use Cases</a>
-              <a href="#conclusion">9. Conclusion</a>
+              <a href="#pfun">9. PFUN Launchpad</a>
+              <a href="#conclusion">10. Conclusion</a>
             </nav>
           </section>
 
@@ -197,7 +198,7 @@ export default function Whitepaper() {
             
             <h3>4.1 System Overview</h3>
             <p>
-              PUSD consists of nine core smart contract components:
+              PUSD consists of seven core smart contract components:
             </p>
             <ol>
               <li>PUSD Token (ERC20)</li>
@@ -206,9 +207,7 @@ export default function Whitepaper() {
               <li>SwapPool</li>
               <li>RewardDistributor</li>
               <li>OraclePriceFeed</li>
-              <li>PGOLD Token (RWA)</li>
-              <li>PGOLDVault</li>
-              <li>GoldOracle</li>
+              <li>PGOLD Token & PGOLDVault (RWA)</li>
             </ol>
 
             <h3>4.2 Core Components</h3>
@@ -238,6 +237,7 @@ export default function Whitepaper() {
               <li>Staking rewards incentivized</li>
               <li>Ecosystem alignment achieved</li>
             </ul>
+            <p><strong>Minimum Lock Period:</strong> 30 days (configurable, default 30 days)</p>
 
             <h4>4.2.3 StakingPool</h4>
             <p><strong>Purpose:</strong> Stake POL and PUSD to earn rewards</p>
@@ -246,16 +246,27 @@ export default function Whitepaper() {
               <li>Minimum 30-day lock period</li>
               <li>Points-based reward system</li>
               <li>Longer lock = higher multiplier</li>
-              <li>Up to 10x multiplier for 365+ days</li>
+              <li>Multiplier ranges from 1x to 10x based on lock period</li>
             </ul>
+            <p><strong>Staking Multipliers:</strong></p>
+            <ul>
+              <li><strong>30-60 days:</strong> 1x to 2x multiplier (linear progression)</li>
+              <li><strong>60-120 days:</strong> 2x to 3x multiplier (linear progression)</li>
+              <li><strong>120-365 days:</strong> 3x to 10x multiplier (linear progression)</li>
+              <li><strong>365+ days:</strong> 10x multiplier (cap)</li>
+            </ul>
+            <p><strong>Points Calculation:</strong></p>
+            <p>Points = (USD value of staked asset × multiplier) / 10</p>
+            <p>Example: Staking $1000 worth of POL for 365 days = ($1000 × 10) / 10 = 1000 points</p>
 
             <h4>4.2.4 SwapPool</h4>
             <p><strong>Purpose:</strong> Swap POL ↔ PUSD directly</p>
             <p><strong>Features:</strong></p>
             <ul>
               <li>Native swap (no bridge)</li>
-              <li>0.3% trading fee (configurable)</li>
-              <li>Fee distribution to stakers/treasury</li>
+              <li>0.3% trading fee for POL to PUSD swaps</li>
+              <li>0.5% trading fee for PUSD to POL swaps</li>
+              <li>Fee accumulation in swap pool reserves</li>
               <li>Real-time price from oracle</li>
             </ul>
 
@@ -278,7 +289,7 @@ export default function Whitepaper() {
               <li><strong>Manual Price</strong> (emergency) - Admin-set price</li>
             </ol>
 
-            <h4>4.2.7 PGOLD Token</h4>
+            <h4>4.2.7 PGOLD Token & PGOLDVault</h4>
             <p><strong>Purpose:</strong> Real World Asset (RWA) token backed by gold</p>
             <p><strong>Key Features:</strong></p>
             <ul>
@@ -286,32 +297,8 @@ export default function Whitepaper() {
               <li>ERC20 token with mint/burn functionality</li>
               <li>Minter/Burner roles managed by PGOLDVault</li>
               <li>Real-time price updates from Chainlink XAU/USD</li>
-            </ul>
-
-            <h4>4.2.8 PGOLDVault</h4>
-            <p><strong>Purpose:</strong> Mint and redeem PGOLD using PUSD</p>
-            <p><strong>Mechanism:</strong></p>
-            <ul>
-              <li>Mint PGOLD: Deposit PUSD, receive PGOLD based on gold price</li>
-              <li>Redeem PGOLD: Deposit PGOLD, receive PUSD based on gold price</li>
-              <li>Mint/Redeem fees (0.5% default) go to vault reserves</li>
-              <li>Slippage protection ensures fair pricing</li>
+              <li>Mint/Redeem fees: 0.5% default (configurable by owner)</li>
               <li>Staleness check: Rejects prices older than 2 hours</li>
-            </ul>
-
-            <h4>4.2.9 GoldOracle</h4>
-            <p><strong>Purpose:</strong> Get real-time gold price in USD</p>
-            <p><strong>Price Sources (Priority Order):</strong></p>
-            <ol>
-              <li><strong>Chainlink XAU/USD</strong> (primary) - Real-time gold price</li>
-              <li><strong>Manual Price</strong> (fallback) - Admin-set price if Chainlink fails</li>
-            </ol>
-            <p><strong>Features:</strong></p>
-            <ul>
-              <li>8 decimals precision</li>
-              <li>2-hour staleness check</li>
-              <li>Automatic price updates</li>
-              <li>Emergency manual override</li>
             </ul>
           </section>
 
@@ -339,18 +326,21 @@ export default function Whitepaper() {
             </ol>
 
             <h3>5.3 Staking Rewards</h3>
-            <p><strong>POL Staking:</strong></p>
+            <p><strong>Points Calculation:</strong></p>
+            <p>Points = (USD value of staked asset × multiplier) / 10</p>
+            <p><strong>Multiplier Calculation:</strong></p>
             <ul>
-              <li>Points = (USD value × multiplier) / 10</li>
-              <li>Multiplier based on lock period</li>
-              <li>Higher lock = higher multiplier</li>
+              <li><strong>30-60 days:</strong> Multiplier = 1 + (lockDays - 30) / 30 (ranges from 1x to 2x)</li>
+              <li><strong>60-120 days:</strong> Multiplier = 2 + (lockDays - 60) / 60 (ranges from 2x to 3x)</li>
+              <li><strong>120-365 days:</strong> Multiplier = 3 + (lockDays - 120) × 7 / 245 (ranges from 3x to 10x)</li>
+              <li><strong>365+ days:</strong> Multiplier = 10x (cap)</li>
             </ul>
-            <p><strong>Staking Tiers:</strong></p>
+            <p><strong>Examples:</strong></p>
             <ul>
-              <li><strong>30-60 days:</strong> 1x-2x multiplier</li>
-              <li><strong>60-120 days:</strong> 2x-3x multiplier</li>
-              <li><strong>120-365 days:</strong> 3x-10x multiplier</li>
-              <li><strong>365+ days:</strong> 10x multiplier (cap)</li>
+              <li>Staking $1000 POL for 30 days = ($1000 × 1) / 10 = 100 points</li>
+              <li>Staking $1000 POL for 60 days = ($1000 × 2) / 10 = 200 points</li>
+              <li>Staking $1000 POL for 120 days = ($1000 × 3) / 10 = 300 points</li>
+              <li>Staking $1000 POL for 365 days = ($1000 × 10) / 10 = 1000 points</li>
             </ul>
 
             <h3>5.4 PGOLD Tokenomics</h3>
@@ -427,14 +417,15 @@ export default function Whitepaper() {
           <section id="usecases" className="whitepaper-section">
             <h2 className="section-title">8. Use Cases</h2>
             
-            <h3>9.1 For Users</h3>
+            <h3>8.1 For Users</h3>
             <ul>
               <li><strong>Stable Store of Value:</strong> Hold PUSD without volatility, earn staking rewards</li>
               <li><strong>DeFi Participation:</strong> Lend/borrow, yield farming, liquidity provision</li>
               <li><strong>Payments:</strong> Stable payments, remittances, cross-border transactions</li>
+              <li><strong>Gold Exposure:</strong> Mint PGOLD for exposure to gold prices</li>
             </ul>
 
-            <h3>9.2 For Developers</h3>
+            <h3>8.2 For Developers</h3>
             <ul>
               <li><strong>Native Integration:</strong> No bridge complexity, better UX, lower costs</li>
               <li><strong>DeFi Protocols:</strong> Lending platforms, DEXs, yield aggregators</li>
@@ -442,15 +433,220 @@ export default function Whitepaper() {
             </ul>
           </section>
 
-          {/* 9. Conclusion */}
+          {/* 9. PFUN Launchpad */}
+          <section id="pfun" className="whitepaper-section">
+            <h2 className="section-title">9. PFUN Launchpad</h2>
+            
+            <h3>9.1 Overview</h3>
+            <p>
+              PFUN is a decentralized token launchpad built on Polygon that enables anyone to create, launch, and trade tokens 
+              through an innovative bonding curve mechanism. Unlike traditional launchpads that require extensive liquidity pools 
+              or order books, PFUN uses mathematical curves to automatically discover prices based on supply and demand.
+            </p>
+            <p>
+              The platform combines token creation, price discovery, community engagement (through boosting), and decentralized 
+              trading into a single, seamless experience. PFUN is designed to be permissionless, transparent, and accessible to 
+              all users while maintaining security through smart contract verification and collateral locking mechanisms.
+            </p>
+
+            <h3>9.2 Core Concepts</h3>
+            
+            <h4>9.2.1 Bonding Curves</h4>
+            <p>
+              A bonding curve is a mathematical function that determines token price based on the number of tokens sold. In PFUN, 
+              the price formula is:
+            </p>
+            <pre style={{ 
+              background: '#0a0a0a', 
+              padding: '1rem', 
+              borderRadius: '4px', 
+              border: '1px solid #333',
+              overflowX: 'auto',
+              margin: '1rem 0',
+              color: '#00ff00',
+              fontFamily: 'Courier New, monospace'
+            }}>
+{`Price = Initial Price + (Tokens Sold × Price Increment)
+
+Where:
+- Initial Price: 0.001 PUSD per token
+- Tokens Sold: Total tokens purchased from the curve
+- Price Increment: 0.000001 PUSD per token`}
+            </pre>
+            <p>
+              As tokens are bought, the price increases linearly. When tokens are sold back to the curve, the price decreases 
+              accordingly. This creates automatic price discovery without requiring external market makers or liquidity providers.
+            </p>
+
+            <h4>9.2.2 Token Launching</h4>
+            <p>
+              Anyone can launch a token on PFUN by providing:
+            </p>
+            <ul>
+              <li>Token name and symbol</li>
+              <li>Total supply (fixed at launch)</li>
+              <li>Launch amount in PUSD (minimum 0.06 PUSD)</li>
+              <li>Optional: Logo URL, website, Telegram, Discord links</li>
+            </ul>
+            <p>
+              Launching requires:
+            </p>
+            <ul>
+              <li><strong>Launch Fee:</strong> 6.666 PUSD (collected by TokenFactory contract)</li>
+              <li><strong>Launch Amount:</strong> PUSD to seed the bonding curve</li>
+              <li><strong>Collateral Lock:</strong> 10% of launch amount in PUSD is automatically locked for 30 days</li>
+            </ul>
+            <p>
+              The collateral lock ensures commitment from creators and prevents malicious launches. After the 30-day lock period, 
+              creators can claim back their locked PUSD collateral.
+            </p>
+
+            <h4>9.2.3 Boosting Mechanism</h4>
+            <p>
+              Tokens can be boosted by burning PUSD. Each PUSD burned equals 1 boost point. Boost points determine token rankings 
+              in the "Top" section, providing visibility and credibility. The boosting mechanism:
+            </p>
+            <ul>
+              <li>Permanently burns PUSD (reduces total supply)</li>
+              <li>Increases token boost points 1:1</li>
+              <li>Helps tokens rank higher in listings</li>
+              <li>Demonstrates community support and investment</li>
+            </ul>
+            <p>
+              Boosting is irreversible - burned PUSD cannot be recovered, ensuring genuine commitment from boosters.
+            </p>
+
+            <h3>9.3 Technical Architecture</h3>
+            
+            <h4>9.3.1 Smart Contracts</h4>
+            <p>
+              PFUN consists of several key smart contracts:
+            </p>
+            <ul>
+              <li><strong>TokenFactory:</strong> Creates ERC-20 tokens and collects launch fees</li>
+              <li><strong>PFUNLaunchpad:</strong> Manages token launches, boosting, and listings</li>
+              <li><strong>PFUNBondingCurve:</strong> Implements bonding curve logic for price discovery</li>
+              <li><strong>PUSD Token:</strong> Native stablecoin used for payments and boosting</li>
+            </ul>
+
+            <h4>9.3.2 Price Discovery Algorithm</h4>
+            <p>
+              The bonding curve uses a linear price function:
+            </p>
+            <pre style={{ 
+              background: '#0a0a0a', 
+              padding: '1rem', 
+              borderRadius: '4px', 
+              border: '1px solid #333',
+              overflowX: 'auto',
+              margin: '1rem 0',
+              color: '#00ff00',
+              fontFamily: 'Courier New, monospace'
+            }}>
+{`When buying:
+  tokensReceived = calculateTokensFromPUSD(pusdAmount)
+  newPrice = currentPrice + (tokensReceived × priceIncrement)
+
+When selling:
+  pusdReceived = calculatePUSDFromTokens(tokenAmount)
+  newPrice = currentPrice - (tokenAmount × priceIncrement)
+
+Price is always calculated on-chain for transparency.`}
+            </pre>
+
+            <h3>9.4 Token Economics</h3>
+            
+            <h4>9.4.1 Launch Fee Structure</h4>
+            <p>
+              Launching a token requires:
+            </p>
+            <ul>
+              <li><strong>6.666 PUSD:</strong> Fixed launch fee (collected by TokenFactory)</li>
+              <li><strong>Launch Amount:</strong> Initial PUSD to seed the bonding curve (minimum 0.06 PUSD)</li>
+              <li><strong>Collateral Lock:</strong> 10% of launch amount in PUSD locked for 30 days</li>
+            </ul>
+            <p>
+              Example: If you launch with 100 PUSD:
+            </p>
+            <ul>
+              <li>6.666 PUSD goes to launch fee</li>
+              <li>100 PUSD goes to bonding curve</li>
+              <li>10 PUSD (10% of 100) is locked as collateral for 30 days</li>
+              <li>Total required: 116.666 PUSD</li>
+            </ul>
+
+            <h4>9.4.2 Trading Mechanics</h4>
+            <p>
+              Trading on PFUN:
+            </p>
+            <ul>
+              <li>Buy orders increase price and token supply</li>
+              <li>Sell orders decrease price and token supply (tokens are burned)</li>
+              <li>No slippage protection needed - price is deterministic</li>
+              <li>All trades execute immediately on-chain</li>
+            </ul>
+
+            <h4>9.4.3 Boost Economics</h4>
+            <p>
+              The boosting mechanism creates a deflationary pressure on PUSD:
+            </p>
+            <ul>
+              <li>PUSD burned for boosting reduces total supply</li>
+              <li>This increases scarcity and value of remaining PUSD</li>
+              <li>Boost points are permanent and cannot be removed</li>
+              <li>Creates a competitive environment for token visibility</li>
+            </ul>
+
+            <h3>9.5 Use Cases</h3>
+            
+            <h4>9.5.1 Token Creators</h4>
+            <p>
+              PFUN enables creators to:
+            </p>
+            <ul>
+              <li>Launch tokens without needing liquidity pools</li>
+              <li>Get immediate price discovery through bonding curves</li>
+              <li>Build community through boosting mechanisms</li>
+              <li>Access decentralized trading from day one</li>
+            </ul>
+
+            <h4>9.5.2 Traders</h4>
+            <p>
+              Traders can:
+            </p>
+            <ul>
+              <li>Trade tokens instantly without waiting for liquidity</li>
+              <li>Benefit from predictable price movements</li>
+              <li>Support projects through boosting</li>
+              <li>Access new tokens early in their lifecycle</li>
+            </ul>
+
+            <h4>9.5.3 Communities</h4>
+            <p>
+              Communities can:
+            </p>
+            <ul>
+              <li>Rally around tokens through collective boosting</li>
+              <li>Show support by burning PUSD for boost points</li>
+              <li>Help tokens reach the top rankings</li>
+              <li>Create organic growth through engagement</li>
+            </ul>
+          </section>
+
+          {/* 10. Conclusion */}
           <section id="conclusion" className="whitepaper-section">
-            <h2 className="section-title">9. Conclusion</h2>
+            <h2 className="section-title">10. Conclusion</h2>
             
             <p>
               PUSD represents a significant step forward for the Polygon ecosystem by providing a native, decentralized, 
               and transparent stablecoin solution. By eliminating bridge dependencies, centralization risks, and 
               transparency issues, PUSD offers users a superior stablecoin experience while aligning incentives with 
               Polygon's growth through POL backing and staking rewards.
+            </p>
+            <p>
+              PFUN Launchpad extends the ecosystem by providing a permissionless token launchpad that democratizes token 
+              creation and trading. Through bonding curves, boosting mechanisms, and decentralized trading, PFUN creates 
+              a sustainable ecosystem where community support directly translates into token visibility and success.
             </p>
 
             <h3>Key Advantages</h3>
@@ -461,6 +657,7 @@ export default function Whitepaper() {
               <li><strong>Secure:</strong> Over-collateralized, audited code</li>
               <li><strong>Rewarding:</strong> Staking incentives for holders</li>
               <li><strong>Aligned:</strong> POL-backed, ecosystem growth</li>
+              <li><strong>Innovative:</strong> PFUN launchpad for token creation</li>
             </ul>
           </section>
 
@@ -473,8 +670,8 @@ export default function Whitepaper() {
               and users should conduct their own research and consult with financial advisors before making investment decisions.
             </p>
             <p>
-              The PUSD protocol is deployed on Polygon mainnet and is subject to smart contract risks, market risks, and 
-              regulatory risks. Users should understand these risks before participating.
+              The PUSD protocol and PFUN Launchpad are deployed on Polygon mainnet and are subject to smart contract risks, 
+              market risks, and regulatory risks. Users should understand these risks before participating.
             </p>
           </section>
         </div>
@@ -488,4 +685,3 @@ export default function Whitepaper() {
     </div>
   );
 }
-

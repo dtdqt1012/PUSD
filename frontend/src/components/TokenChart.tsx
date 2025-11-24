@@ -125,65 +125,88 @@ export default function TokenChart({ tokenAddress, height = 300, launchTimestamp
         // Get current block number
         const currentBlock = await provider.getBlockNumber();
         
-        // Find launch block by querying TokenLaunched event from PFUNLaunchpad
+        // Find launch block - always query from block 0 to get full history
+        // This ensures new users see all transactions from the beginning
         let fromBlock = 0;
-        if (launchTimestamp) {
-          // If launch timestamp provided, estimate block number
-          // Polygon: ~2 seconds per block, so estimate from timestamp
-          const currentBlockInfo = await provider.getBlock(currentBlock);
-          if (currentBlockInfo) {
-            const blocksSinceLaunch = Math.floor((currentBlockInfo.timestamp - launchTimestamp) / 2);
-            fromBlock = Math.max(0, currentBlock - blocksSinceLaunch - 1000); // Add buffer
-          }
-        } else {
-          // Try to find launch event from PFUNLaunchpad
-          try {
-            const launchpad = new ethers.Contract(
-              CONTRACTS.PFUNLaunchpad.address,
-              CONTRACTS.PFUNLaunchpad.abi,
-              provider
-            );
-            const launchFilter = launchpad.filters.TokenLaunched(tokenAddress);
-            // Query from a reasonable starting point (last 100k blocks = ~2-3 days)
-            const launchEvents = await launchpad.queryFilter(
-              launchFilter,
-              Math.max(0, currentBlock - 100000),
-              currentBlock
-            );
-            if (launchEvents.length > 0) {
-              // Found launch event, query from that block
-              fromBlock = Math.max(0, launchEvents[0].blockNumber - 10); // 10 blocks before launch
-            } else {
-              // Not found in recent blocks, query from block 0 (full history)
-              fromBlock = 0;
-            }
-          } catch {
-            // If can't find launch event, query from block 0 (full history)
+        
+        // Try to find launch event for optimization, but always query from block 0
+        try {
+          const launchpad = new ethers.Contract(
+            CONTRACTS.PFUNLaunchpad.address,
+            CONTRACTS.PFUNLaunchpad.abi,
+            provider
+          );
+          const launchFilter = launchpad.filters.TokenLaunched(tokenAddress);
+          // Query from block 0 to find launch event
+          const launchEvents = await Promise.race([
+            launchpad.queryFilter(launchFilter, 0, currentBlock),
+            new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 10000)) // 10s timeout
+          ]).catch(() => []);
+          
+          if (launchEvents.length > 0) {
+            // Found launch event, but still query from block 0 to ensure we get all data
+            fromBlock = 0;
+          } else {
+            // Not found, query from block 0 anyway (full history)
             fromBlock = 0;
           }
+        } catch {
+          // If can't find launch event, query from block 0 (full history)
+          fromBlock = 0;
         }
         
-        // Query events with timeout protection
-        // If querying from block 0, it might be slow, so add timeout
+        // Query events with timeout protection and retry logic
+        // Always query from block 0 to get full history for new users
         const queryEvents = async () => {
           try {
+            // Query from block 0 with timeout protection
+            const queryWithTimeout = async (filter: any, from: number, to: number) => {
+              return Promise.race([
+                bondingCurve.queryFilter(filter, from, to),
+                new Promise<any[]>((resolve) => {
+                  setTimeout(() => {
+                    console.warn('Event query timeout, using fallback');
+                    resolve([]);
+                  }, 30000); // 30s timeout
+                })
+              ]).catch(() => []);
+            };
+            
             const [buyEvents, sellEvents] = await Promise.all([
-              bondingCurve.queryFilter(buyFilter, fromBlock, currentBlock).catch(() => []),
-              bondingCurve.queryFilter(sellFilter, fromBlock, currentBlock).catch(() => []),
+              queryWithTimeout(buyFilter, fromBlock, currentBlock),
+              queryWithTimeout(sellFilter, fromBlock, currentBlock),
             ]);
+            
+            // If we got results, return them
+            if (buyEvents.length > 0 || sellEvents.length > 0) {
+              return { buyEvents, sellEvents };
+            }
+            
+            // If no results and we queried from block 0, try fallback
+            if (fromBlock === 0) {
+              console.warn('No events found from block 0, trying fallback range');
+              const fallbackBlock = Math.max(0, currentBlock - 200000);
+              const [fallbackBuy, fallbackSell] = await Promise.all([
+                bondingCurve.queryFilter(buyFilter, fallbackBlock, currentBlock).catch(() => []),
+                bondingCurve.queryFilter(sellFilter, fallbackBlock, currentBlock).catch(() => []),
+              ]);
+              return { buyEvents: fallbackBuy, sellEvents: fallbackSell };
+            }
+            
             return { buyEvents, sellEvents };
           } catch (error) {
-            // If query fails (e.g., timeout), fallback to recent blocks
-            if (fromBlock === 0) {
-              console.warn('Full history query failed, falling back to recent blocks');
-              const fallbackBlock = Math.max(0, currentBlock - 10000); // Last 10k blocks
+            console.warn('Event query failed, trying fallback:', error);
+            // Fallback: try from a reasonable range (last 200k blocks)
+            const fallbackBlock = Math.max(0, currentBlock - 200000);
+            try {
               const [buyEvents, sellEvents] = await Promise.all([
                 bondingCurve.queryFilter(buyFilter, fallbackBlock, currentBlock).catch(() => []),
                 bondingCurve.queryFilter(sellFilter, fallbackBlock, currentBlock).catch(() => []),
               ]);
               return { buyEvents, sellEvents };
+            } catch {
+              return { buyEvents: [], sellEvents: [] };
             }
-            throw error;
           }
         };
         
@@ -451,7 +474,7 @@ export default function TokenChart({ tokenAddress, height = 300, launchTimestamp
           </div>
         </div>
         <div style={{ fontSize: '0.75rem', color: '#888' }}>
-          {priceData.length} points
+          {priceData.length} tx
         </div>
       </div>
       

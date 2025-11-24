@@ -81,6 +81,111 @@ const faqData: FAQItem[] = [
     category: 'PGOLD',
     question: 'What are the fees for PGOLD?',
     answer: 'PGOLD has mint and redeem fees (default 0.5% each, configurable by owner). These fees help maintain the vault reserves and ensure the stability of the PGOLD ecosystem. The fees are transparent and shown before you confirm any transaction.'
+  },
+  {
+    category: 'PFUN',
+    question: 'What is PFUN?',
+    answer: 'PFUN is a decentralized token launchpad on Polygon. It allows anyone to create and launch tokens with a bonding curve mechanism for price discovery. Tokens can be boosted by burning PUSD, and top tokens can be listed on the platform.'
+  },
+  {
+    category: 'PFUN',
+    question: 'How do I launch a token?',
+    answer: 'To launch a token, you need to provide token details (name, symbol, total supply), a launch amount in PUSD, and optionally social links (website, Telegram, Discord). There is a launch fee of 6.666 PUSD. Once launched, your token will appear in the "New" section and can be traded immediately.'
+  },
+  {
+    category: 'PFUN',
+    question: 'What is a bonding curve?',
+    answer: 'A bonding curve is a mathematical formula that determines token price based on supply. As more tokens are bought, the price increases. When tokens are sold, the price decreases. This creates automatic price discovery without needing a traditional order book or liquidity pool.'
+  },
+  {
+    category: 'PFUN',
+    question: 'How does boosting work?',
+    answer: 'You can boost any active token by burning PUSD. Each PUSD burned equals 1 boost point. Boost points help tokens rank higher in the "Top" section. The more boost points a token has, the higher it appears in rankings. Boosting is permanent - the PUSD is burned and cannot be recovered.'
+  },
+  {
+    category: 'PFUN',
+    question: 'How do I buy tokens?',
+    answer: 'To buy tokens, enter the amount of PUSD you want to spend in the buy input field. The system will calculate how many tokens you will receive based on the current bonding curve price. Click "Buy" to execute the transaction. You can also click "MAX" to use all available PUSD.'
+  },
+  {
+    category: 'PFUN',
+    question: 'How do I sell tokens?',
+    answer: 'To sell tokens, enter the amount of tokens you want to sell in the sell input field. The system will calculate how much PUSD you will receive based on the current bonding curve price. Click "Sell" to execute the transaction. You can also click "MAX" to sell all your tokens.'
+  },
+  {
+    category: 'PFUN',
+    question: 'What is collateral locking?',
+    answer: 'When you launch a token, 10% of your launch amount (in PUSD) is automatically locked as collateral for 30 days. This collateral ensures commitment from creators and prevents malicious launches. After the 30-day lock period, you can claim back your locked PUSD using the unlockCollateral function. The collateral is separate from the launch fee (6.666 PUSD).'
+  },
+  {
+    category: 'PFUN',
+    question: 'How does listing work?',
+    answer: 'Tokens with high boost points and trading volume can be listed by the contract owner. Listed tokens gain more visibility and credibility. The listing process is manual and based on token performance metrics like boost points, volume, and community engagement.'
+  },
+  {
+    category: 'PFUN',
+    question: 'What happens to the launch fee?',
+    answer: 'The 6.666 PUSD launch fee is collected by the TokenFactory contract. The contract owner can withdraw these fees. This fee helps maintain the platform and prevents spam launches.'
+  },
+  {
+    category: 'PFUN',
+    question: 'Can I change token details after launch?',
+    answer: 'No, token details (name, symbol, total supply) cannot be changed after launch. However, you can update social links (website, Telegram, Discord) if you are the token creator.'
+  },
+  {
+    category: 'PFUN',
+    question: 'What is the minimum launch amount?',
+    answer: 'The minimum launch amount depends on the token parameters and bonding curve settings. Generally, you should launch with enough PUSD to ensure initial liquidity and price stability. Check the launch form for specific requirements.'
+  },
+  {
+    category: 'PFUN',
+    question: 'How is token price calculated?',
+    answer: 'Token price is calculated using a bonding curve formula: Price = Initial Price + (Tokens Sold × Price Increment). As more tokens are bought, the price increases linearly. When tokens are sold, the price decreases accordingly. The exact formula is implemented in the smart contract.'
+  },
+  {
+    category: 'PFUN',
+    question: 'What are boost points?',
+    answer: 'Boost points represent the total amount of PUSD burned to boost a token. Each PUSD burned equals 1 boost point. Tokens are ranked by boost points in the "Top" section. Higher boost points indicate more community support and investment.'
+  },
+  {
+    category: 'PFUN',
+    question: 'Can I unlock my collateral early?',
+    answer: 'No, collateral (10% of launch amount) is locked for 30 days from the moment you launch the token. This ensures token stability and prevents creators from abandoning tokens immediately after launch. You must wait until the 30-day lock period expires before you can claim your collateral back using the unlockCollateral function.'
+  },
+  {
+    category: 'PFUN',
+    question: 'Is there a trading fee?',
+    answer: 'Trading fees may apply depending on the bonding curve implementation. Check the token contract or trading interface for specific fee information. Fees typically go to liquidity reserves or are distributed to token holders.'
+  },
+  {
+    category: 'PFUN',
+    question: 'How do I see my token balance?',
+    answer: 'Your token balance is automatically displayed when you expand a token card. The balance shows how many tokens you own for that specific token. Make sure your wallet is connected to see your balances.'
+  },
+  {
+    category: 'PFUN',
+    question: 'What happens if I sell all my tokens?',
+    answer: 'If you sell all your tokens, you will receive PUSD back based on the current bonding curve price. The tokens are burned (removed from circulation), and the price decreases accordingly. You can always buy back tokens later if you want.'
+  },
+  {
+    category: 'PFUN',
+    question: 'Can I launch multiple tokens?',
+    answer: 'Yes, you can launch multiple tokens. Each launch requires paying the launch fee (6.666 PUSD) and providing collateral. There is no limit on how many tokens you can launch, but each token must meet the minimum requirements.'
+  },
+  {
+    category: 'PFUN',
+    question: 'How do I get my token to the top?',
+    answer: 'To get your token to the top, you need boost points. Encourage community members to boost your token by burning PUSD. Each PUSD burned = 1 boost point. Higher boost points and trading volume will help your token rank higher in the "Top" section.'
+  },
+  {
+    category: 'PFUN',
+    question: 'What is the difference between "Top" and "New" tokens?',
+    answer: '"Top" tokens are ranked by boost points - tokens with the most PUSD burned appear first. "New" tokens are sorted by creation time - the most recently launched tokens appear first. Both sections show active tokens that can be traded.'
+  },
+  {
+    category: 'PFUN',
+    question: 'Is PFUN safe to use?',
+    answer: 'PFUN smart contracts are verified on PolygonScan and can be audited by anyone. However, always do your own research (DYOR) before launching or trading tokens. Be cautious of scams and only interact with tokens you trust. Never invest more than you can afford to lose.'
   }
 ];
 
@@ -114,7 +219,7 @@ export default function FAQ() {
           <span className="terminal-prompt">&gt;</span>
           <span>Frequently Asked Questions</span>
         </h1>
-        <p className="page-subtitle">Everything you need to know about PUSD</p>
+        <p className="page-subtitle">Everything you need to know about PUSD, PGOLD, and PFUN</p>
       </div>
 
       <div className="faq-filters">

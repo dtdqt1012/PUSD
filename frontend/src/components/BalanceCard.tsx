@@ -7,6 +7,7 @@ import { formatBalance, formatPrice } from '../utils/format';
 import { cache } from '../utils/cache';
 import TerminalNumber from './TerminalNumber';
 import { loadWithTimeout } from '../utils/loadWithTimeout';
+import TVLChart from './TVLChart';
 
 export default function BalanceCard() {
   const { provider, account, signer } = useWeb3();
@@ -23,6 +24,7 @@ export default function BalanceCard() {
   const [swapPoolReserves, setSwapPoolReserves] = useState<string>('0');
   const [pusdStaked, setPusdStaked] = useState<string>('0');
   const [claimableRewards, setClaimableRewards] = useState<string>('0');
+  const [claimablePolRewards, setClaimablePolRewards] = useState<string>('0');
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false);
   const mountedRef = useRef(true);
@@ -129,15 +131,27 @@ export default function BalanceCard() {
             const vaultContract = new Contract(CONTRACTS.MintingVault.address, CONTRACTS.MintingVault.abi, provider);
             const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, provider);
             
-            const [polBal, pusdBal, userColl, points, claimable] = await Promise.allSettled([
+            const [polBal, pusdBal, userColl, points, claimable, userStakes] = await Promise.allSettled([
               loadWithTimeout(provider.getBalance(account), 5000).catch(() => null),
               loadWithTimeout(pusdContract.balanceOf(account), 5000).catch(() => null),
               loadWithTimeout(vaultContract.userCollateral(account), 5000).catch(() => null),
               loadWithTimeout(stakingContract.getUserTotalPoints(account), 5000).catch(() => null),
               loadWithTimeout(rewardContract.getClaimableRewards(account), 5000).catch(() => null),
+              loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
             ]);
             
             const totalColl = userColl.status === 'fulfilled' && userColl.value ? userColl.value : 0n;
+            
+            // Calculate claimable POL from unlocked stakes
+            let claimablePol = 0n;
+            if (userStakes.status === 'fulfilled' && userStakes.value) {
+              const currentTime = Math.floor(Date.now() / 1000);
+              for (const stake of userStakes.value) {
+                if (stake.active && Number(stake.lockUntil) <= currentTime) {
+                  claimablePol += BigInt(stake.amount.toString());
+                }
+              }
+            }
             
             if (mountedRef.current) {
               setPolBalance(polBal.status === 'fulfilled' && polBal.value ? formatBalance(polBal.value) : '0');
@@ -145,6 +159,7 @@ export default function BalanceCard() {
               setUserCollateral(formatBalance(totalColl));
               setUserPoints(points.status === 'fulfilled' && points.value ? formatBalance(points.value) : '0');
               setClaimableRewards(claimable.status === 'fulfilled' && claimable.value ? formatBalance(claimable.value) : '0');
+              setClaimablePolRewards(formatBalance(claimablePol));
             }
           }
         } catch (error) {
@@ -231,15 +246,27 @@ export default function BalanceCard() {
                 const vaultContract = new Contract(CONTRACTS.MintingVault.address, CONTRACTS.MintingVault.abi, provider);
                 const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, provider);
                 
-                const [polBal, pusdBal, userColl, points, claimable] = await Promise.allSettled([
+                const [polBal, pusdBal, userColl, points, claimable, userStakes] = await Promise.allSettled([
                   loadWithTimeout(provider.getBalance(account), 5000).catch(() => null),
                   loadWithTimeout(pusdContract.balanceOf(account), 5000).catch(() => null),
                   loadWithTimeout(vaultContract.userCollateral(account), 5000).catch(() => null),
                   loadWithTimeout(stakingContract.getUserTotalPoints(account), 5000).catch(() => null),
                   loadWithTimeout(rewardContract.getClaimableRewards(account), 5000).catch(() => null),
+                  loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
                 ]);
                 
                 const totalColl = userColl.status === 'fulfilled' && userColl.value ? userColl.value : 0n;
+                
+                // Calculate claimable POL from unlocked stakes
+                let claimablePol = 0n;
+                if (userStakes.status === 'fulfilled' && userStakes.value) {
+                  const currentTime = Math.floor(Date.now() / 1000);
+                  for (const stake of userStakes.value) {
+                    if (stake.active && Number(stake.lockUntil) <= currentTime) {
+                      claimablePol += BigInt(stake.amount.toString());
+                    }
+                  }
+                }
                 
                 if (mountedRef.current) {
                   if (polBal.status === 'fulfilled' && polBal.value) setPolBalance(formatBalance(polBal.value));
@@ -247,6 +274,7 @@ export default function BalanceCard() {
                   setUserCollateral(formatBalance(totalColl));
                   if (points.status === 'fulfilled' && points.value) setUserPoints(formatBalance(points.value));
                   if (claimable.status === 'fulfilled' && claimable.value) setClaimableRewards(formatBalance(claimable.value));
+                  setClaimablePolRewards(formatBalance(claimablePol));
                 }
               }
             }
@@ -350,6 +378,11 @@ export default function BalanceCard() {
               <div className="value">
                 <TerminalNumber value={parseFloat(claimableRewards).toFixed(2)} suffix=" PUSD" />
               </div>
+              {parseFloat(claimablePolRewards) > 0 && (
+                <div className="value" style={{ marginTop: '4px', fontSize: '0.9rem' }}>
+                  <TerminalNumber value={parseFloat(claimablePolRewards).toFixed(4)} suffix=" POL" />
+                </div>
+              )}
               {parseFloat(claimableRewards) > 0 && signer && (
                 <button
                   onClick={handleClaimRewards}
@@ -366,7 +399,7 @@ export default function BalanceCard() {
                     fontWeight: 'bold',
                   }}
                 >
-                  Claim Rewards
+                  Claim PUSD
                 </button>
               )}
             </div>
@@ -411,22 +444,16 @@ export default function BalanceCard() {
         </div>
       </div>
 
+      {/* TVL Chart */}
+      <div className="info-section">
+        <h3>TVL Chart</h3>
+        <TVLChart height={300} />
+      </div>
+
       {/* Key Metrics */}
       <div className="info-section">
         <h3>Key Metrics</h3>
         <div className="stats-grid">
-          <div className="stat-item highlight">
-            <strong>Market Cap</strong>
-            <span>
-              <TerminalNumber value={`$${(parseFloat(totalPusd) * parseFloat(polPrice)).toFixed(2)}`} />
-            </span>
-          </div>
-          <div className="stat-item highlight">
-            <strong>TVL</strong>
-            <span>
-              <TerminalNumber value={((parseFloat(vaultPol) + parseFloat(totalStaked) + parseFloat(swapPoolReserves)) * parseFloat(polPrice)).toFixed(2)} suffix=" USD" />
-            </span>
-          </div>
           <div className="stat-item">
             <strong>PUSD Staked</strong>
             <span>

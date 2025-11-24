@@ -47,38 +47,51 @@ export default function Leaderboard() {
         const currentBlock = await provider.getBlockNumber();
         const fromBlock = 0; // Query from beginning to get all users
 
-        // Query all Staked events (POL staking) - from beginning
+        // Query all events that involve users - from beginning to get ALL users
         // Use longer timeout for full history query
-        const stakedEvents = await loadWithTimeout(
-          stakingContract.queryFilter(stakingContract.filters.Staked(), fromBlock, currentBlock),
-          120000 // 2 minutes timeout for full history
-        ).catch((error) => {
-          console.warn('Staked events query timeout or error:', error);
-          // Fallback: try from last 500k blocks if full query fails
-          const fallbackFromBlock = Math.max(0, currentBlock - 500000);
-          return stakingContract.queryFilter(
-            stakingContract.filters.Staked(), 
-            fallbackFromBlock, 
-            currentBlock
-          ).catch(() => []);
-        });
+        const [stakedEvents, pusdStakedEvents, lockExtendedEvents] = await Promise.all([
+          loadWithTimeout(
+            stakingContract.queryFilter(stakingContract.filters.Staked(), fromBlock, currentBlock),
+            120000 // 2 minutes timeout for full history
+          ).catch((error) => {
+            console.warn('Staked events query timeout or error:', error);
+            // Fallback: try from last 500k blocks if full query fails
+            const fallbackFromBlock = Math.max(0, currentBlock - 500000);
+            return stakingContract.queryFilter(
+              stakingContract.filters.Staked(), 
+              fallbackFromBlock, 
+              currentBlock
+            ).catch(() => []);
+          }),
+          loadWithTimeout(
+            stakingContract.queryFilter(stakingContract.filters.PUSDStaked(), fromBlock, currentBlock),
+            120000 // 2 minutes timeout for full history
+          ).catch((error) => {
+            console.warn('PUSDStaked events query timeout or error:', error);
+            // Fallback: try from last 500k blocks if full query fails
+            const fallbackFromBlock = Math.max(0, currentBlock - 500000);
+            return stakingContract.queryFilter(
+              stakingContract.filters.PUSDStaked(), 
+              fallbackFromBlock, 
+              currentBlock
+            ).catch(() => []);
+          }),
+          loadWithTimeout(
+            stakingContract.queryFilter(stakingContract.filters.LockExtended(), fromBlock, currentBlock),
+            120000 // 2 minutes timeout for full history
+          ).catch((error) => {
+            console.warn('LockExtended events query timeout or error:', error);
+            // Fallback: try from last 500k blocks if full query fails
+            const fallbackFromBlock = Math.max(0, currentBlock - 500000);
+            return stakingContract.queryFilter(
+              stakingContract.filters.LockExtended(), 
+              fallbackFromBlock, 
+              currentBlock
+            ).catch(() => []);
+          })
+        ]);
 
-        // Query all PUSDStaked events (PUSD staking) - from beginning
-        const pusdStakedEvents = await loadWithTimeout(
-          stakingContract.queryFilter(stakingContract.filters.PUSDStaked(), fromBlock, currentBlock),
-          120000 // 2 minutes timeout for full history
-        ).catch((error) => {
-          console.warn('PUSDStaked events query timeout or error:', error);
-          // Fallback: try from last 500k blocks if full query fails
-          const fallbackFromBlock = Math.max(0, currentBlock - 500000);
-          return stakingContract.queryFilter(
-            stakingContract.filters.PUSDStaked(), 
-            fallbackFromBlock, 
-            currentBlock
-          ).catch(() => []);
-        });
-
-        // Get unique users from both event types
+        // Get unique users from all event types to ensure we capture all users
         const userSet = new Set<string>();
         
         // Add users from POL staking events
@@ -97,28 +110,50 @@ export default function Leaderboard() {
           }
         }
 
+        // Add users from LockExtended events (users who extended their locks)
+        for (const event of lockExtendedEvents) {
+          const log = event as EventLog;
+          if (log.args && log.args.user) {
+            userSet.add(log.args.user.toString().toLowerCase());
+          }
+        }
 
         const users = Array.from(userSet);
 
-        // Get points for each user
+        // Batch query points for all users to improve performance
         const entries: LeaderboardEntry[] = [];
-        for (const user of users) {
-          try {
-            const points = await loadWithTimeout(
-              stakingContract.getUserTotalPoints(user),
-              5000
-            ).catch(() => 0n);
+        const batchSize = 20; // Process 20 users at a time
+        
+        for (let i = 0; i < users.length; i += batchSize) {
+          const batch = users.slice(i, i + batchSize);
+          const batchPromises = batch.map(async (user) => {
+            try {
+              const points = await loadWithTimeout(
+                stakingContract.getUserTotalPoints(user),
+                10000 // Longer timeout for batch processing
+              ).catch(() => 0n);
 
-            if (points > 0n) {
-              entries.push({
-                address: user,
-                points: formatBalance(points),
-                rank: 0, // Will be set after sorting
-              });
+              if (points > 0n) {
+                return {
+                  address: user,
+                  points: formatBalance(points),
+                  rank: 0, // Will be set after sorting
+                };
+              }
+              return null;
+            } catch (error) {
+              // Skip if error
+              return null;
             }
-          } catch (error) {
-            // Skip if error
-            continue;
+          });
+
+          const batchResults = await Promise.all(batchPromises);
+          const validEntries = batchResults.filter((entry): entry is LeaderboardEntry => entry !== null);
+          entries.push(...validEntries);
+
+          // Small delay between batches to avoid overwhelming the RPC
+          if (i + batchSize < users.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
 

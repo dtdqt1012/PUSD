@@ -37,6 +37,7 @@ export default function StakingSection() {
   const [loadingStakes, setLoadingStakes] = useState(true);
   const [showStakesList, setShowStakesList] = useState(false);
   const [claimableRewards, setClaimableRewards] = useState<string>('0');
+  const [claimablePolRewards, setClaimablePolRewards] = useState<string>('0');
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -79,9 +80,22 @@ export default function StakingSection() {
           ]);
           
           if (mountedRef.current) {
-            setStakes(userStakes.status === 'fulfilled' ? userStakes.value : []);
-            setPusdStakes(userPusdStakes.status === 'fulfilled' ? userPusdStakes.value : []);
+            const stakesData = userStakes.status === 'fulfilled' ? userStakes.value : [];
+            const pusdStakesData = userPusdStakes.status === 'fulfilled' ? userPusdStakes.value : [];
+            setStakes(stakesData);
+            setPusdStakes(pusdStakesData);
             setClaimableRewards(claimable.status === 'fulfilled' && claimable.value ? formatBalance(claimable.value) : '0');
+            
+            // Calculate claimable POL from unlocked stakes
+            const currentTime = Math.floor(Date.now() / 1000);
+            let claimablePol = 0n;
+            for (const stake of stakesData) {
+              if (stake.active && Number(stake.lockUntil) <= currentTime) {
+                claimablePol += BigInt(stake.amount.toString());
+              }
+            }
+            setClaimablePolRewards(formatBalance(claimablePol));
+            
             if (userStakes.status === 'fulfilled') {
               cache.set(cacheKey, userStakes.value, 120000);
             }
@@ -120,8 +134,19 @@ export default function StakingSection() {
             
             if (mountedRef.current) {
               if (userStakes.status === 'fulfilled') {
-                setStakes(userStakes.value);
-                cache.set(`stakes-${account}`, userStakes.value, 30000);
+                const stakesData = userStakes.value;
+                setStakes(stakesData);
+                cache.set(`stakes-${account}`, stakesData, 30000);
+                
+                // Calculate claimable POL from unlocked stakes
+                const currentTime = Math.floor(Date.now() / 1000);
+                let claimablePol = 0n;
+                for (const stake of stakesData) {
+                  if (stake.active && Number(stake.lockUntil) <= currentTime) {
+                    claimablePol += BigInt(stake.amount.toString());
+                  }
+                }
+                setClaimablePolRewards(formatBalance(claimablePol));
               }
               if (userPusdStakes.status === 'fulfilled') {
                 setPusdStakes(userPusdStakes.value);
@@ -263,6 +288,60 @@ export default function StakingSection() {
     }
   };
 
+  const handleClaimAllPol = async () => {
+    if (!signer || !account) return;
+    if (parseFloat(claimablePolRewards) <= 0) {
+      showNotification('No POL to claim', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+      const currentTime = Math.floor(Date.now() / 1000);
+      
+      // Find all unlocked stake IDs
+      const unlockedStakeIds: number[] = [];
+      for (let i = 0; i < stakes.length; i++) {
+        if (stakes[i].active && Number(stakes[i].lockUntil) <= currentTime) {
+          unlockedStakeIds.push(i);
+        }
+      }
+
+      if (unlockedStakeIds.length === 0) {
+        showNotification('No unlocked stakes to claim', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Unstake all unlocked stakes
+      for (const stakeId of unlockedStakeIds) {
+        await executeTransaction(
+          stakingContract,
+          'unstake',
+          [stakeId],
+          signer
+        );
+      }
+      
+      showNotification(`Successfully claimed ${unlockedStakeIds.length} stake(s)!`, 'success');
+      setClaimablePolRewards('0');
+      
+      // Reload stakes
+      const [userStakes] = await Promise.allSettled([
+        loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+      ]);
+      if (userStakes.status === 'fulfilled') {
+        setStakes(userStakes.value);
+      }
+    } catch (error: any) {
+      console.error('Claim POL failed:', error);
+      showNotification(getTransactionErrorMessage(error), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="section staking-section">
       <h2 onClick={toggle} style={headerStyle}>
@@ -334,7 +413,7 @@ export default function StakingSection() {
             {loading ? 'Staking...' : 'Stake POL'}
           </button>
 
-          {parseFloat(claimableRewards) > 0 && (
+          {(parseFloat(claimableRewards) > 0 || parseFloat(claimablePolRewards) > 0) && (
             <div className="rewards-section" style={{
               marginTop: '20px',
               padding: '15px',
@@ -342,23 +421,44 @@ export default function StakingSection() {
               borderRadius: '8px',
               border: '1px solid rgba(139, 92, 246, 0.3)',
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <div>
-                  <strong style={{ color: 'var(--purple-glow)' }}>Claimable Rewards</strong>
+              <div style={{ marginBottom: '10px' }}>
+                <strong style={{ color: 'var(--purple-glow)' }}>Claimable Rewards</strong>
+                {parseFloat(claimableRewards) > 0 && (
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--green-glow)', marginTop: '5px' }}>
                     {parseFloat(claimableRewards).toFixed(2)} PUSD
                   </div>
-                </div>
-                <button
-                  onClick={handleClaimRewards}
-                  disabled={loading}
-                  className="btn-primary"
-                  style={{
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                  }}
-                >
-                  {loading ? 'Claiming...' : 'Claim Rewards'}
-                </button>
+                )}
+                {parseFloat(claimablePolRewards) > 0 && (
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--green-glow)', marginTop: '5px' }}>
+                    {parseFloat(claimablePolRewards).toFixed(4)} POL
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {parseFloat(claimableRewards) > 0 && (
+                  <button
+                    onClick={handleClaimRewards}
+                    disabled={loading}
+                    className="btn-primary"
+                    style={{
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                    }}
+                  >
+                    {loading ? 'Claiming...' : 'Claim PUSD'}
+                  </button>
+                )}
+                {parseFloat(claimablePolRewards) > 0 && (
+                  <button
+                    onClick={handleClaimAllPol}
+                    disabled={loading}
+                    className="btn-primary"
+                    style={{
+                      background: 'linear-gradient(135deg, #00ff00 0%, #00cc00 100%)',
+                    }}
+                  >
+                    {loading ? 'Claiming...' : 'Claim All POL'}
+                  </button>
+                )}
               </div>
             </div>
           )}
