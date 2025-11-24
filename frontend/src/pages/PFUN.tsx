@@ -1040,7 +1040,7 @@ function PFUN() {
                           <span className="terminal-prompt">&gt;</span>
                           <span>Price Chart</span>
                         </div>
-                        <TokenChart tokenAddress={launch.token} height={250} launchTimestamp={launch.createdAt} />
+                        <TokenChart tokenAddress={launch.token} height={250} />
                       </div>
 
                       <a
@@ -1345,7 +1345,7 @@ function PFUN() {
                           <span className="terminal-prompt">&gt;</span>
                           <span>Price Chart</span>
                         </div>
-                        <TokenChart tokenAddress={launch.token} height={250} launchTimestamp={launch.createdAt} />
+                        <TokenChart tokenAddress={launch.token} height={250} />
                       </div>
 
                       <a
