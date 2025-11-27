@@ -45,28 +45,59 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
       if (!currentBlockData) return;
 
       // Find deployment block - query from block 0 to ensure we get all data
-      // Try to find first event from StakingPool, but if not found, use block 0
+      // Try to find first event from StakingPool from multiple ranges
       let deploymentBlock = 0;
       let deploymentBlockData = null;
       
       try {
-        // Query first Staked event (most common event) from a reasonable range
-        // If contract is old, we'll query from block 0 anyway
-        const searchRange = Math.min(currentBlock, 500000); // Search up to 500k blocks back
-        const stakingEvents = await loadWithTimeout(
-          stakingContract.queryFilter(stakingContract.filters.Staked(), 0, searchRange),
-          20000
-        ).catch(() => []);
+        // Try multiple search ranges to find first event
+        const searchRanges = [
+          { from: 0, to: Math.min(currentBlock, 1000000) }, // 1M blocks
+          { from: 0, to: Math.min(currentBlock, 2000000) }, // 2M blocks
+          { from: 0, to: currentBlock }, // All blocks
+        ];
+        
+        for (const range of searchRanges) {
+          try {
+            const stakingEvents = await loadWithTimeout(
+              stakingContract.queryFilter(stakingContract.filters.Staked(), range.from, range.to),
+              15000
+            ).catch(() => []);
 
-        if (stakingEvents.length > 0) {
-          const earliestBlock = Math.min(...stakingEvents.map(e => e.blockNumber));
-          deploymentBlock = Math.max(0, earliestBlock - 50); // Start a bit before first event
-        } else {
-          // If no events found, query from block 0 to ensure we get all data
-          deploymentBlock = 0;
+            if (stakingEvents.length > 0) {
+              const earliestBlock = Math.min(...stakingEvents.map(e => e.blockNumber));
+              deploymentBlock = Math.max(0, earliestBlock - 50); // Start a bit before first event
+              break; // Found, stop searching
+            }
+          } catch (error) {
+            // Continue to next range
+          }
+        }
+        
+        // If no events found, use block 0 to ensure we get all data
+        if (deploymentBlock === 0 && currentBlock > 0) {
+          // Try to find contract creation block by checking contract code
+          try {
+            const code = await provider.getCode(CONTRACTS.StakingPool.address, 0);
+            if (code && code !== '0x') {
+              // Contract exists, but no events found - use a reasonable default
+              // Try to find from MintingVault or other contracts
+              const vaultEvents = await loadWithTimeout(
+                vaultContract.queryFilter(vaultContract.filters.Deposited(), 0, Math.min(currentBlock, 1000000)),
+                10000
+              ).catch(() => []);
+              
+              if (vaultEvents.length > 0) {
+                const earliestBlock = Math.min(...vaultEvents.map(e => e.blockNumber));
+                deploymentBlock = Math.max(0, earliestBlock - 50);
+              }
+            }
+          } catch (error) {
+            // Use block 0
+            deploymentBlock = 0;
+          }
         }
       } catch (error) {
-        console.warn('Failed to find deployment block, using block 0:', error);
         // Fallback: use block 0 to ensure we get all data
         deploymentBlock = 0;
       }
@@ -106,7 +137,7 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
         setCurrentTVL(tvl.toFixed(2));
       }
 
-      // Query TVL at key change points (from events) + daily samples
+      // Query TVL at key change points - simplified approach for faster loading
       const blocksPerDay = Math.floor((24 * 60 * 60) / 2); // ~2 seconds per block on Polygon
       const oneDayInSeconds = 24 * 60 * 60;
       
@@ -114,82 +145,49 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
       const totalSeconds = Number(now) - Number(deploymentTimestamp);
       const totalDays = Math.max(1, Math.ceil(totalSeconds / oneDayInSeconds));
       
-      // Limit to max 90 days for fast loading
-      const maxDays = Math.min(totalDays, 90);
-      const daysToQuery = maxDays;
+      // Use all days from deployment (no limit) to show full history
+      const daysToQuery = totalDays;
       
       const tvlDataPoints: TVLPoint[] = [];
       const startBlock = deploymentBlock;
       
-      // First, get all events that change TVL from StakingPool
+      // Use daily samples from deployment to current
+      // Limit to max 60 data points for reasonable loading time while showing full history
       const eventBlocks = new Set<number>();
+      const maxDataPoints = Math.min(daysToQuery + 1, 60);
+      const step = Math.max(1, Math.floor((daysToQuery + 1) / maxDataPoints));
       
-      try {
-        // Query StakingPool events that affect TVL
-        const [stakedEvents, unstakedEvents, pusdStakedEvents, pusdUnstakedEvents, lockExtendedEvents] = await Promise.all([
-          stakingContract.queryFilter(stakingContract.filters.Staked(), startBlock, currentBlock).catch(() => []),
-          stakingContract.queryFilter(stakingContract.filters.Unstaked(), startBlock, currentBlock).catch(() => []),
-          stakingContract.queryFilter(stakingContract.filters.PUSDStaked(), startBlock, currentBlock).catch(() => []),
-          stakingContract.queryFilter(stakingContract.filters.PUSDUnstaked(), startBlock, currentBlock).catch(() => []),
-          stakingContract.queryFilter(stakingContract.filters.LockExtended(), startBlock, currentBlock).catch(() => []),
-        ]);
-        
-        // Collect unique block numbers from events
-        [...stakedEvents, ...unstakedEvents, ...pusdStakedEvents, ...pusdUnstakedEvents, ...lockExtendedEvents].forEach(event => {
-          eventBlocks.add(event.blockNumber);
-        });
-        
-        // Also add daily samples to ensure we have data points even if no events
-        const totalPoints = daysToQuery + 1;
-        for (let i = 0; i < totalPoints; i++) {
-          const targetBlock = startBlock + (i * blocksPerDay);
-          if (targetBlock <= currentBlock) {
-            eventBlocks.add(targetBlock);
-          }
+      // Always include deployment block (first day)
+      eventBlocks.add(startBlock);
+      
+      // Add daily samples
+      for (let i = 1; i < maxDataPoints; i++) {
+        const targetBlock = startBlock + (i * step * blocksPerDay);
+        if (targetBlock <= currentBlock) {
+          eventBlocks.add(targetBlock);
         }
-        
-        // Always include current block
-        eventBlocks.add(currentBlock);
-      } catch (error) {
-        console.warn('Failed to query events, falling back to daily sampling:', error);
-        // Fallback: just use daily sampling
-        const totalPoints = daysToQuery + 1;
-        for (let i = 0; i < totalPoints; i++) {
-          const targetBlock = startBlock + (i * blocksPerDay);
-          if (targetBlock <= currentBlock) {
-            eventBlocks.add(targetBlock);
-          }
-        }
-        eventBlocks.add(currentBlock);
       }
+      
+      // Always include current block
+      eventBlocks.add(currentBlock);
       
       // Convert to sorted array
       const blocksToQuery = Array.from(eventBlocks).sort((a, b) => a - b);
-      const batchSize = 20; // Process 20 blocks at a time
       
-      for (let pointIndex = 0; pointIndex < blocksToQuery.length; pointIndex += batchSize) {
-        const batchEnd = Math.min(pointIndex + batchSize, blocksToQuery.length);
-        const batchPromises: Promise<TVLPoint | null>[] = [];
+      // Query all blocks in parallel for faster loading
+      const allPromises = blocksToQuery.map(async (blockNumber): Promise<TVLPoint | null> => {
+        if (blockNumber < 0 || blockNumber > currentBlock) return null;
+        
+        try {
+          const block = await loadWithTimeout(provider.getBlock(blockNumber), 2000).catch(() => null);
+          if (!block) return null;
 
-        const progress = Math.min(100, Math.round((pointIndex / blocksToQuery.length) * 100));
-        setLoadingProgress(`Loading TVL... ${progress}%`);
-
-        for (let i = pointIndex; i < batchEnd; i++) {
-          const blockNumber = blocksToQuery[i];
-          
-          if (blockNumber < 0 || blockNumber > currentBlock) continue;
-          
-          const promise = (async (): Promise<TVLPoint | null> => {
-            try {
-              const block = await loadWithTimeout(provider.getBlock(blockNumber), 3000).catch(() => null);
-              if (!block) return null;
-
-              const [historicalPolPrice, historicalVaultPol, historicalStaked, historicalSwap] = await Promise.all([
-                loadWithTimeout(oracleContract.getPOLPrice({ blockTag: blockNumber }), 5000).catch(() => null),
-                loadWithTimeout(vaultContract.getBalance({ blockTag: blockNumber }), 5000).catch(() => null),
-                loadWithTimeout(stakingContract.totalStaked({ blockTag: blockNumber }), 5000).catch(() => null),
-                loadWithTimeout(swapContract.getBalance({ blockTag: blockNumber }), 5000).catch(() => null),
-              ]);
+          const [historicalPolPrice, historicalVaultPol, historicalStaked, historicalSwap] = await Promise.all([
+            loadWithTimeout(oracleContract.getPOLPrice({ blockTag: blockNumber }), 3000).catch(() => null),
+            loadWithTimeout(vaultContract.getBalance({ blockTag: blockNumber }), 3000).catch(() => null),
+            loadWithTimeout(stakingContract.totalStaked({ blockTag: blockNumber }), 3000).catch(() => null),
+            loadWithTimeout(swapContract.getBalance({ blockTag: blockNumber }), 3000).catch(() => null),
+          ]);
 
               if (historicalPolPrice && historicalVaultPol !== null && historicalStaked !== null && historicalSwap !== null) {
                 const polPriceNum = parseFloat(formatPrice(historicalPolPrice));
@@ -217,21 +215,12 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
             } catch (error) {
               return null;
             }
-          })();
+          });
 
-          batchPromises.push(promise);
-        }
-
-        const batchResults = await Promise.all(batchPromises);
-        const validResults = batchResults.filter((result): result is TVLPoint => result !== null);
-        tvlDataPoints.push(...validResults);
-
-        // Update state with current progress (progressive loading)
-        if (tvlDataPoints.length > 0) {
-          const sortedData = [...tvlDataPoints].sort((a, b) => a.timestamp - b.timestamp);
-          setTvlData(sortedData);
-        }
-      }
+      // Execute all queries in parallel
+      const allResults = await Promise.all(allPromises);
+      const validResults = allResults.filter((result): result is TVLPoint => result !== null);
+      tvlDataPoints.push(...validResults);
       
       // Sort by timestamp
       tvlDataPoints.sort((a, b) => a.timestamp - b.timestamp);
@@ -303,7 +292,7 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
 
       setTvlData(uniqueDailyData);
     } catch (error) {
-      console.error('Failed to load TVL data:', error);
+      // Error loading TVL data
     } finally {
       setLoading(false);
     }

@@ -1,0 +1,9 @@
+{
+  "name": "pusd-lottery-api",
+  "version": "1.0.0",
+  "description": "Vercel serverless function for PUSD Lottery bot",
+  "dependencies": {
+    "ethers": "^6.15.0"
+  }
+}
+

@@ -119,12 +119,17 @@ contract OraclePriceFeed is Ownable {
         require(address(chainlinkAggregator) != address(0), "Oracle: Chainlink not set");
         
         (
-            uint80 roundId,
+            uint80 _roundId,
             int256 answer,
-            uint256 startedAt,
+            uint256 _startedAt,
             uint256 updatedAt,
-            uint80 answeredInRound
+            uint80 _answeredInRound
         ) = chainlinkAggregator.latestRoundData();
+        
+        // Suppress unused variable warnings
+        _roundId;
+        _startedAt;
+        _answeredInRound;
         
         require(answer > 0, "Oracle: Invalid Chainlink answer");
         require(updatedAt > 0, "Oracle: Round not complete");

@@ -43,52 +43,93 @@ export default function Leaderboard() {
           provider
         );
 
-        // Query from block 0 to get ALL stakers (including old ones who haven't staked recently)
         const currentBlock = await provider.getBlockNumber();
-        const fromBlock = 0; // Query from beginning to get all users
+        
+        // Find deployment block by querying first event from multiple ranges
+        let fromBlock = 0; // Start from block 0 to ensure we get all data
+        try {
+          // Try multiple search ranges to find first event
+          const searchRanges = [
+            { from: 0, to: Math.min(currentBlock, 1000000) }, // 1M blocks
+            { from: 0, to: Math.min(currentBlock, 2000000) }, // 2M blocks
+            { from: 0, to: currentBlock }, // All blocks
+          ];
+          
+          for (const range of searchRanges) {
+            try {
+              const firstStakedEvents = await loadWithTimeout(
+                stakingContract.queryFilter(stakingContract.filters.Staked(), range.from, range.to),
+                10000
+              ).catch(() => []);
+              
+              if (firstStakedEvents.length > 0) {
+                const earliestBlock = Math.min(...firstStakedEvents.map(e => e.blockNumber));
+                fromBlock = Math.max(0, earliestBlock - 100);
+                break; // Found, stop searching
+              }
+            } catch (error) {
+              // Continue to next range
+            }
+          }
+        } catch (error) {
+          // Use block 0 if all searches fail
+          fromBlock = 0;
+        }
 
-        // Query all events that involve users - from beginning to get ALL users
-        // Use longer timeout for full history query
+        // Query events with pagination to get all data from deployment
+        const queryWithPagination = async (filter: any): Promise<EventLog[]> => {
+          const totalRange = currentBlock - fromBlock;
+          const maxRangePerQuery = 200000;
+          
+          // If range is small, query directly
+          if (totalRange <= maxRangePerQuery) {
+            try {
+              return await loadWithTimeout(
+                stakingContract.queryFilter(filter, fromBlock, currentBlock),
+                20000
+              ).catch(() => []);
+            } catch (error) {
+              return [];
+            }
+          }
+          
+          // Query in batches from deployment to current
+          const allEvents: EventLog[] = [];
+          let batchFrom = fromBlock;
+          
+          while (batchFrom < currentBlock) {
+            const batchTo = Math.min(batchFrom + maxRangePerQuery, currentBlock);
+            try {
+              const batchEvents = await loadWithTimeout(
+                stakingContract.queryFilter(filter, batchFrom, batchTo),
+                20000
+              ).catch(() => []);
+              
+              allEvents.push(...batchEvents);
+              batchFrom = batchTo + 1;
+              
+              if (batchFrom < currentBlock) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+            } catch (error) {
+              // Continue with next batch even if this one failed
+              batchFrom = batchTo + 1;
+            }
+          }
+          
+          // Remove duplicates
+          const uniqueEvents = allEvents.filter((event, index, self) =>
+            index === self.findIndex(e => e.transactionHash === event.transactionHash && e.logIndex === event.logIndex)
+          );
+          
+          return uniqueEvents;
+        };
+
+        // Query all events with pagination
         const [stakedEvents, pusdStakedEvents, lockExtendedEvents] = await Promise.all([
-          loadWithTimeout(
-            stakingContract.queryFilter(stakingContract.filters.Staked(), fromBlock, currentBlock),
-            120000 // 2 minutes timeout for full history
-          ).catch((error) => {
-            console.warn('Staked events query timeout or error:', error);
-            // Fallback: try from last 500k blocks if full query fails
-            const fallbackFromBlock = Math.max(0, currentBlock - 500000);
-            return stakingContract.queryFilter(
-              stakingContract.filters.Staked(), 
-              fallbackFromBlock, 
-              currentBlock
-            ).catch(() => []);
-          }),
-          loadWithTimeout(
-            stakingContract.queryFilter(stakingContract.filters.PUSDStaked(), fromBlock, currentBlock),
-            120000 // 2 minutes timeout for full history
-          ).catch((error) => {
-            console.warn('PUSDStaked events query timeout or error:', error);
-            // Fallback: try from last 500k blocks if full query fails
-            const fallbackFromBlock = Math.max(0, currentBlock - 500000);
-            return stakingContract.queryFilter(
-              stakingContract.filters.PUSDStaked(), 
-              fallbackFromBlock, 
-              currentBlock
-            ).catch(() => []);
-          }),
-          loadWithTimeout(
-            stakingContract.queryFilter(stakingContract.filters.LockExtended(), fromBlock, currentBlock),
-            120000 // 2 minutes timeout for full history
-          ).catch((error) => {
-            console.warn('LockExtended events query timeout or error:', error);
-            // Fallback: try from last 500k blocks if full query fails
-            const fallbackFromBlock = Math.max(0, currentBlock - 500000);
-            return stakingContract.queryFilter(
-              stakingContract.filters.LockExtended(), 
-              fallbackFromBlock, 
-              currentBlock
-            ).catch(() => []);
-          })
+          queryWithPagination(stakingContract.filters.Staked()),
+          queryWithPagination(stakingContract.filters.PUSDStaked()),
+          queryWithPagination(stakingContract.filters.LockExtended()),
         ]);
 
         // Get unique users from all event types to ensure we capture all users
@@ -172,7 +213,7 @@ export default function Leaderboard() {
           setLeaderboard(topEntries);
         }
       } catch (error) {
-        console.error('Failed to load leaderboard:', error);
+        // Error loading leaderboard
       } finally {
         if (mountedRef.current) {
           setLoading(false);

@@ -1,0 +1,23 @@
+{
+  "name": "pusd-lottery-bot",
+  "version": "1.0.0",
+  "description": "Automated bot to trigger PUSD Lottery draws",
+  "main": "lottery-bot.js",
+  "scripts": {
+    "start": "node lottery-bot.js",
+    "dev": "node lottery-bot.js"
+  },
+  "keywords": [
+    "lottery",
+    "bot",
+    "automation",
+    "polygon"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.15.0",
+    "dotenv": "^16.3.1"
+  }
+}
+

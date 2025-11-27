@@ -11,6 +11,7 @@
     "deploy:polygon": "hardhat run scripts/deploy-all.js --network polygon",
     "verify:all": "hardhat run scripts/verify-all.js --network polygon",
     "verify:one": "hardhat run scripts/verify-one.js --network polygon",
+    "verify:lottery": "hardhat run scripts/verify-lottery.js --network polygon",
     "dex:setup": "hardhat run scripts/setup-dex-liquidity.js --network polygon",
     "dex:monitor": "hardhat run scripts/monitor-price.js --network polygon",
     "dex:submit": "hardhat run scripts/submit-to-exchanges.js --network polygon",
@@ -40,7 +41,6 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^0.6.1",
-    "@react-three/fiber": "^9.4.0",
     "dotenv": "^16.3.1"
   }
 }

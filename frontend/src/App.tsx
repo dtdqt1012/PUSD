@@ -10,6 +10,7 @@ const Home = lazy(() => import('./pages/Home'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const Whitepaper = lazy(() => import('./pages/Whitepaper'));
 const PFUN = lazy(() => import('./pages/PFUN'));
+const Lottery = lazy(() => import('./pages/Lottery'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -57,6 +58,12 @@ function Navigation() {
             className={`nav-link ${location.pathname === '/pfun' ? 'active' : ''}`}
           >
             PFUN
+          </Link>
+          <Link 
+            to="/lottery" 
+            className={`nav-link ${location.pathname === '/lottery' ? 'active' : ''}`}
+          >
+            Lottery
           </Link>
           <Link to="/app" className="nav-link nav-link-app">
             PUSD App
@@ -117,6 +124,14 @@ function App() {
             element={
               <Layout>
                 <PFUN />
+              </Layout>
+            } 
+          />
+          <Route 
+            path="/lottery" 
+            element={
+              <Layout>
+                <Lottery />
               </Layout>
             } 
           />

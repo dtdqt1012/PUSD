@@ -4,6 +4,12 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm install",
   "framework": "vite",
+  "crons": [
+    {
+      "path": "/api/execute-draw",
+      "schedule": "0 20 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/_vercel/insights/(.*)",
@@ -55,4 +61,3 @@
     }
   ]
 }
-

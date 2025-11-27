@@ -71,7 +71,7 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
         setCurrentPrice(currentPriceFormatted);
       }
     } catch (error) {
-      console.error('Error loading current price:', error);
+      // Error loading current price
     }
   };
 
@@ -124,11 +124,11 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
         // Get current block number
         const currentBlock = await provider.getBlockNumber();
         
-        // Find launch block - always query from block 0 to get full history
-        // This ensures new users see all transactions from the beginning
-        let fromBlock = 0;
+        // Find launch block to optimize query range
+        // Try multiple search ranges to find launch event (even if token launched long ago)
+        let fromBlock = Math.max(0, currentBlock - 200000); // Default: 200k blocks
         
-        // Try to find launch event for optimization, but always query from block 0
+        // Try to find launch event to get exact launch block
         try {
           const launchpad = new ethers.Contract(
             CONTRACTS.PFUNLaunchpad.address,
@@ -136,76 +136,104 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
             provider
           );
           const launchFilter = launchpad.filters.TokenLaunched(tokenAddress);
-          // Query from block 0 to find launch event
+          
+          // Try to find launch event (optimized: only search recent range first)
+          const searchRange = Math.max(0, currentBlock - 1000000); // Search last 1M blocks
           const launchEvents = await Promise.race([
-            launchpad.queryFilter(launchFilter, 0, currentBlock),
-            new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 10000)) // 10s timeout
+            launchpad.queryFilter(launchFilter, searchRange, currentBlock),
+            new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 5000))
           ]).catch(() => []);
           
           if (launchEvents.length > 0) {
-            // Found launch event, but still query from block 0 to ensure we get all data
-            fromBlock = 0;
+            const launchBlock = launchEvents[0].blockNumber;
+            fromBlock = Math.max(0, launchBlock - 100);
           } else {
-            // Not found, query from block 0 anyway (full history)
-            fromBlock = 0;
+            // Fallback: try to find first buy event
+            try {
+              const firstBuyFilter = bondingCurve.filters.TokensBought(tokenAddress);
+              const buyEvents = await Promise.race([
+                bondingCurve.queryFilter(firstBuyFilter, searchRange, currentBlock),
+                new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 5000))
+              ]).catch(() => []);
+              
+              if (buyEvents.length > 0) {
+                const firstBuyBlock = Math.min(...buyEvents.map(e => e.blockNumber));
+                fromBlock = Math.max(0, firstBuyBlock - 100);
+              }
+            } catch (error) {
+              // Use default range
+            }
           }
-        } catch {
-          // If can't find launch event, query from block 0 (full history)
-          fromBlock = 0;
+        } catch (error) {
+          // Use default range if can't find launch
         }
         
-        // Query events with timeout protection and retry logic
-        // Always query from block 0 to get full history for new users
+        // Query events with pagination for large ranges
         const queryEvents = async () => {
+          const queryWithPagination = async (filter: any, initialFromBlock: number) => {
+            const totalRange = currentBlock - initialFromBlock;
+            const maxRangePerQuery = 200000; // Increased to 200k blocks for faster loading
+            
+            // If range is small enough, query directly
+            if (totalRange <= maxRangePerQuery) {
+              try {
+                const events = await Promise.race([
+                  bondingCurve.queryFilter(filter, initialFromBlock, currentBlock),
+                  new Promise<any[]>((resolve) => {
+                    setTimeout(() => resolve([]), 20000); // Reduced timeout
+                  })
+                ]).catch(() => []);
+                
+                return events;
+              } catch (error: any) {
+                // Fall through to batch query
+              }
+            }
+            
+            // For large ranges, query in batches
+            const allEvents: any[] = [];
+            let batchFrom = initialFromBlock;
+            
+            while (batchFrom < currentBlock) {
+              const batchTo = Math.min(batchFrom + maxRangePerQuery, currentBlock);
+              try {
+                const batchEvents = await Promise.race([
+                  bondingCurve.queryFilter(filter, batchFrom, batchTo),
+                  new Promise<any[]>((resolve) => {
+                    setTimeout(() => resolve([]), 20000);
+                  })
+                ]).catch(() => []);
+                
+                allEvents.push(...batchEvents);
+                batchFrom = batchTo + 1;
+                
+                // Reduced delay between batches
+                if (batchFrom < currentBlock) {
+                  await new Promise(resolve => setTimeout(resolve, 200));
+                }
+              } catch (error: any) {
+                // Continue with next batch
+                batchFrom = batchTo + 1;
+              }
+            }
+            
+            // Remove duplicates
+            const uniqueEvents = allEvents.filter((event, index, self) =>
+              index === self.findIndex(e => e.transactionHash === event.transactionHash && e.logIndex === event.logIndex)
+            );
+            
+            return uniqueEvents;
+          };
+          
           try {
-            // Query from block 0 with timeout protection
-            const queryWithTimeout = async (filter: any, from: number, to: number) => {
-              return Promise.race([
-                bondingCurve.queryFilter(filter, from, to),
-                new Promise<any[]>((resolve) => {
-                  setTimeout(() => {
-                    console.warn('Event query timeout, using fallback');
-                    resolve([]);
-                  }, 30000); // 30s timeout
-                })
-              ]).catch(() => []);
-            };
-            
             const [buyEvents, sellEvents] = await Promise.all([
-              queryWithTimeout(buyFilter, fromBlock, currentBlock),
-              queryWithTimeout(sellFilter, fromBlock, currentBlock),
+              queryWithPagination(buyFilter, fromBlock),
+              queryWithPagination(sellFilter, fromBlock),
             ]);
-            
-            // If we got results, return them
-            if (buyEvents.length > 0 || sellEvents.length > 0) {
-              return { buyEvents, sellEvents };
-            }
-            
-            // If no results and we queried from block 0, try fallback
-            if (fromBlock === 0) {
-              console.warn('No events found from block 0, trying fallback range');
-              const fallbackBlock = Math.max(0, currentBlock - 200000);
-              const [fallbackBuy, fallbackSell] = await Promise.all([
-                bondingCurve.queryFilter(buyFilter, fallbackBlock, currentBlock).catch(() => []),
-                bondingCurve.queryFilter(sellFilter, fallbackBlock, currentBlock).catch(() => []),
-              ]);
-              return { buyEvents: fallbackBuy, sellEvents: fallbackSell };
-            }
             
             return { buyEvents, sellEvents };
           } catch (error) {
-            console.warn('Event query failed, trying fallback:', error);
-            // Fallback: try from a reasonable range (last 200k blocks)
-            const fallbackBlock = Math.max(0, currentBlock - 200000);
-            try {
-              const [buyEvents, sellEvents] = await Promise.all([
-                bondingCurve.queryFilter(buyFilter, fallbackBlock, currentBlock).catch(() => []),
-                bondingCurve.queryFilter(sellFilter, fallbackBlock, currentBlock).catch(() => []),
-              ]);
-              return { buyEvents, sellEvents };
-            } catch {
-              return { buyEvents: [], sellEvents: [] };
-            }
+            return { buyEvents: [], sellEvents: [] };
           }
         };
         
@@ -302,7 +330,6 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
                 : Number(ethers.formatEther(event.args.pusdReceived)),
             });
           } catch (err) {
-            console.error('Error processing event:', err);
             continue;
           }
         }
@@ -345,7 +372,6 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
 
         setPriceData(history);
       } catch (eventError) {
-        console.error('Error fetching events:', eventError);
         // Fallback: just show current price
         const fallbackBlock = await provider.getBlockNumber();
         const block = await provider.getBlock(fallbackBlock);
@@ -358,7 +384,7 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
         }
       }
     } catch (error) {
-      console.error('Error loading price data:', error);
+      // Error loading price data
     } finally {
       setLoading(false);
     }

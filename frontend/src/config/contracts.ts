@@ -11,6 +11,7 @@ import TokenFactoryABI from '../abis/TokenFactory.json';
 import PFUNLaunchpadABI from '../abis/PFUNLaunchpad.json';
 import PFUNBondingCurveABI from '../abis/PFUNBondingCurve.json';
 import PFUNCollateralLockABI from '../abis/PFUNCollateralLock.json';
+import PUSDLotteryABI from '../abis/PUSDLottery.json';
 
 export const CONTRACT_ADDRESSES = {
   oracle: '0x2af4468A497Faed609be0e0c56b76d364a158A75',
@@ -27,8 +28,10 @@ export const CONTRACT_ADDRESSES = {
   tokenFactory: '0x7FA374FD18F14f27Dbd389631795669Bb1b7dde6',
   pfunLaunchpad: '0xdb5f5b4d3ce38247692DbC11640Df9633E789406',
   pfunBondingCurve: '0x9441D35C5a5987622E51e6d1179FB48327Aa05a6',
-  pfunCollateralLock: '0xC14Cf34dbe04D0e825EBEe34508a4938CD6b325E',
-};
+    pfunCollateralLock: '0xC14Cf34dbe04D0e825EBEe34508a4938CD6b325E',
+    // PUSD Lottery
+    pusdLottery: '0xE575b78d369F7aa6c35E96a6382Cc7EdDD2a606B',
+  };
 
 export const NETWORK_CONFIG = {
   chainId: 137, // Polygon
@@ -89,6 +92,11 @@ export const CONTRACTS = {
   PFUNCollateralLock: {
     address: CONTRACT_ADDRESSES.pfunCollateralLock,
     abi: PFUNCollateralLockABI,
+  },
+  // PUSD Lottery
+  PUSDLottery: {
+    address: CONTRACT_ADDRESSES.pusdLottery,
+    abi: PUSDLotteryABI,
   },
 };
 

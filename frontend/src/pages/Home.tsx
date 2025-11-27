@@ -62,7 +62,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        
+
         <div className="features-section">
         <div className="section-header">
           <h2 className="section-title">
