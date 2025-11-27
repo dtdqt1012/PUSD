@@ -38,15 +38,15 @@ export default function PGOLDInfoCard() {
         ]);
 
         const results = await Promise.allSettled([
-          loadWithTimeout(oracleContract.getGoldPrice(), 10000).catch((err) => {
+          loadWithTimeout(() => oracleContract.getGoldPrice(), 10000).catch((err) => {
             console.warn('Failed to load gold price:', err);
             return null;
           }),
-          loadWithTimeout(pgoldTokenContract.totalSupply(), 10000).catch((err) => {
+          loadWithTimeout(() => pgoldTokenContract.totalSupply(), 10000).catch((err) => {
             console.warn('Failed to load total PGOLD:', err);
             return null;
           }),
-          loadWithTimeout(pgoldVaultContract.totalPUSDReserve(), 10000).catch((err) => {
+          loadWithTimeout(() => pgoldVaultContract.totalPUSDReserve(), 10000).catch((err) => {
             console.warn('Failed to load PUSD reserve:', err);
             return null;
           }),
@@ -83,11 +83,11 @@ export default function PGOLDInfoCard() {
         // Load user balances
         if (account && mountedRef.current) {
           const [userPGOLD, userPUSD] = await Promise.allSettled([
-            loadWithTimeout(pgoldTokenContract.balanceOf(account), 10000).catch((err) => {
+            loadWithTimeout(() => pgoldTokenContract.balanceOf(account), 10000).catch((err) => {
               console.warn('Failed to load user PGOLD balance:', err);
               return null;
             }),
-            loadWithTimeout(pusdContract.balanceOf(account), 10000).catch((err) => {
+            loadWithTimeout(() => pusdContract.balanceOf(account), 10000).catch((err) => {
               console.warn('Failed to load user PUSD balance:', err);
               return null;
             }),

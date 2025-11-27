@@ -59,8 +59,9 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
         for (const range of searchRanges) {
           try {
             const stakingEvents = await loadWithTimeout(
-              stakingContract.queryFilter(stakingContract.filters.Staked(), range.from, range.to),
-              15000
+              () => stakingContract.queryFilter(stakingContract.filters.Staked(), range.from, range.to),
+              30000,
+              2
             ).catch(() => []);
 
             if (stakingEvents.length > 0) {
@@ -82,8 +83,9 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
               // Contract exists, but no events found - use a reasonable default
               // Try to find from MintingVault or other contracts
               const vaultEvents = await loadWithTimeout(
-                vaultContract.queryFilter(vaultContract.filters.Deposited(), 0, Math.min(currentBlock, 1000000)),
-                10000
+                () => vaultContract.queryFilter(vaultContract.filters.Deposited(), 0, Math.min(currentBlock, 1000000)),
+                30000,
+                2
               ).catch(() => []);
               
               if (vaultEvents.length > 0) {
@@ -103,8 +105,9 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
 
       // Get deployment block timestamp
       deploymentBlockData = await loadWithTimeout(
-        provider.getBlock(deploymentBlock),
-        5000
+        () => provider.getBlock(deploymentBlock),
+        15000,
+        2
       ).catch(() => null);
       
       if (!deploymentBlockData) {
@@ -118,10 +121,10 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
 
       // Get current TVL
       const [polPrice, vaultPol, totalStaked, swapPoolReserves] = await Promise.all([
-        loadWithTimeout(oracleContract.getPOLPrice(), 5000).catch(() => null),
-        loadWithTimeout(vaultContract.getBalance(), 5000).catch(() => null),
-        loadWithTimeout(stakingContract.totalStaked(), 5000).catch(() => null),
-        loadWithTimeout(swapContract.getBalance(), 5000).catch(() => null),
+        loadWithTimeout(() => oracleContract.getPOLPrice(), 5000).catch(() => null),
+        loadWithTimeout(() => vaultContract.getBalance(), 5000).catch(() => null),
+        loadWithTimeout(() => stakingContract.totalStaked(), 5000).catch(() => null),
+        loadWithTimeout(() => swapContract.getBalance(), 5000).catch(() => null),
       ]);
 
       if (polPrice && vaultPol !== null && totalStaked !== null && swapPoolReserves !== null) {
@@ -178,14 +181,14 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
         if (blockNumber < 0 || blockNumber > currentBlock) return null;
         
         try {
-          const block = await loadWithTimeout(provider.getBlock(blockNumber), 2000).catch(() => null);
+          const block = await loadWithTimeout(() => provider.getBlock(blockNumber), 10000, 1).catch(() => null);
           if (!block) return null;
 
           const [historicalPolPrice, historicalVaultPol, historicalStaked, historicalSwap] = await Promise.all([
-            loadWithTimeout(oracleContract.getPOLPrice({ blockTag: blockNumber }), 3000).catch(() => null),
-            loadWithTimeout(vaultContract.getBalance({ blockTag: blockNumber }), 3000).catch(() => null),
-            loadWithTimeout(stakingContract.totalStaked({ blockTag: blockNumber }), 3000).catch(() => null),
-            loadWithTimeout(swapContract.getBalance({ blockTag: blockNumber }), 3000).catch(() => null),
+            loadWithTimeout(() => oracleContract.getPOLPrice({ blockTag: blockNumber }), 15000, 1).catch(() => null),
+            loadWithTimeout(() => vaultContract.getBalance({ blockTag: blockNumber }), 15000, 1).catch(() => null),
+            loadWithTimeout(() => stakingContract.totalStaked({ blockTag: blockNumber }), 15000, 1).catch(() => null),
+            loadWithTimeout(() => swapContract.getBalance({ blockTag: blockNumber }), 15000, 1).catch(() => null),
           ]);
 
               if (historicalPolPrice && historicalVaultPol !== null && historicalStaked !== null && historicalSwap !== null) {

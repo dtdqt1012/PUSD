@@ -43,19 +43,19 @@ export default function PGOLDRedeemSection() {
         ]);
 
         const [balance, fee, price] = await Promise.allSettled([
-          loadWithTimeout(pgoldContract.balanceOf(account), 15000).catch((err) => {
+          loadWithTimeout(() => pgoldContract.balanceOf(account), 15000).catch((err) => {
             if (err?.message !== 'Timeout') {
               console.warn('Failed to load PGOLD balance:', err);
             }
             return null;
           }),
-          loadWithTimeout(vaultContract.redeemFeeBPS(), 15000).catch((err) => {
+          loadWithTimeout(() => vaultContract.redeemFeeBPS(), 15000).catch((err) => {
             if (err?.message !== 'Timeout') {
               console.warn('Failed to load redeem fee:', err);
             }
             return null;
           }),
-          loadWithTimeout(oracleContract.getGoldPrice(), 15000).catch((err) => {
+          loadWithTimeout(() => oracleContract.getGoldPrice(), 15000).catch((err) => {
             if (err?.message !== 'Timeout') {
               console.warn('Failed to load gold price:', err);
             }
@@ -117,7 +117,7 @@ export default function PGOLDRedeemSection() {
         );
 
         const pusdAmount = await loadWithTimeout(
-          vaultContract.getRedeemablePUSD(parseAmount(pgoldAmount)),
+          () => vaultContract.getRedeemablePUSD(parseAmount(pgoldAmount)),
           5000
         );
 

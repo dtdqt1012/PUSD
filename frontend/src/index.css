@@ -3548,6 +3548,20 @@ html {
 
 .quantity-input[type=number] {
   -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Hide number input spinner for PFUN buy/sell inputs */
+.terminal-input[type=number]::-webkit-inner-spin-button,
+.terminal-input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+.terminal-input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .ticket-cost {

@@ -40,16 +40,16 @@ function ProjectInfo() {
         ]);
 
         const results = await Promise.allSettled([
-          loadWithTimeout(oracleContract.getPOLPrice(), 5000).catch(() => null),
-          loadWithTimeout(pusdContract.totalSupply(), 5000).catch(() => null),
-          loadWithTimeout(vaultContract.getBalance(), 5000).catch(() => null),
-          loadWithTimeout(stakingContract.totalStaked(), 5000).catch(() => null),
-          loadWithTimeout(swapContract.getBalance(), 5000).catch(() => null),
-          loadWithTimeout(stakingContract.totalPUSDStaked(), 5000).catch(() => null),
+          loadWithTimeout(() => oracleContract.getPOLPrice(), 5000).catch(() => null),
+          loadWithTimeout(() => pusdContract.totalSupply(), 5000).catch(() => null),
+          loadWithTimeout(() => vaultContract.getBalance(), 5000).catch(() => null),
+          loadWithTimeout(() => stakingContract.totalStaked(), 5000).catch(() => null),
+          loadWithTimeout(() => swapContract.getBalance(), 5000).catch(() => null),
+          loadWithTimeout(() => stakingContract.totalPUSDStaked(), 5000).catch(() => null),
           // PUSD trong contracts để tính PUSD users đang cầm
-          loadWithTimeout(pusdContract.balanceOf(CONTRACTS.MintingVault.address), 5000).catch(() => null),
-          loadWithTimeout(pusdContract.balanceOf(CONTRACTS.SwapPool.address), 5000).catch(() => null),
-          pgoldVaultContract ? loadWithTimeout(pusdContract.balanceOf(CONTRACTS.PGOLDVault.address), 5000).catch(() => null) : Promise.resolve(null),
+          loadWithTimeout(() => pusdContract.balanceOf(CONTRACTS.MintingVault.address), 5000).catch(() => null),
+          loadWithTimeout(() => pusdContract.balanceOf(CONTRACTS.SwapPool.address), 5000).catch(() => null),
+          pgoldVaultContract ? loadWithTimeout(() => pusdContract.balanceOf(CONTRACTS.PGOLDVault.address), 5000).catch(() => null) : Promise.resolve(null),
         ]);
 
         if (!mountedRef.current) return;

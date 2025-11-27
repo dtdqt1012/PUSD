@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ethers } from 'ethers';
 import { CONTRACTS } from '../config/contracts';
 import { useWeb3 } from '../hooks/useWeb3';
+import { loadWithTimeout } from '../utils/loadWithTimeout';
 
 interface PricePoint {
   time: number;
@@ -139,10 +140,11 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
           
           // Try to find launch event (optimized: only search recent range first)
           const searchRange = Math.max(0, currentBlock - 1000000); // Search last 1M blocks
-          const launchEvents = await Promise.race([
-            launchpad.queryFilter(launchFilter, searchRange, currentBlock),
-            new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 5000))
-          ]).catch(() => []);
+          const launchEvents = await loadWithTimeout(
+            () => launchpad.queryFilter(launchFilter, searchRange, currentBlock),
+            30000,
+            2
+          ).catch(() => []);
           
           if (launchEvents.length > 0) {
             const launchBlock = launchEvents[0].blockNumber;
@@ -151,10 +153,11 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
             // Fallback: try to find first buy event
             try {
               const firstBuyFilter = bondingCurve.filters.TokensBought(tokenAddress);
-              const buyEvents = await Promise.race([
-                bondingCurve.queryFilter(firstBuyFilter, searchRange, currentBlock),
-                new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 5000))
-              ]).catch(() => []);
+              const buyEvents = await loadWithTimeout(
+                () => bondingCurve.queryFilter(firstBuyFilter, searchRange, currentBlock),
+                30000,
+                2
+              ).catch(() => []);
               
               if (buyEvents.length > 0) {
                 const firstBuyBlock = Math.min(...buyEvents.map(e => e.blockNumber));
@@ -172,17 +175,16 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
         const queryEvents = async () => {
           const queryWithPagination = async (filter: any, initialFromBlock: number) => {
             const totalRange = currentBlock - initialFromBlock;
-            const maxRangePerQuery = 200000; // Increased to 200k blocks for faster loading
+            const maxRangePerQuery = 100000; // Reduced for better reliability
             
             // If range is small enough, query directly
             if (totalRange <= maxRangePerQuery) {
               try {
-                const events = await Promise.race([
-                  bondingCurve.queryFilter(filter, initialFromBlock, currentBlock),
-                  new Promise<any[]>((resolve) => {
-                    setTimeout(() => resolve([]), 20000); // Reduced timeout
-                  })
-                ]).catch(() => []);
+                const events = await loadWithTimeout(
+                  () => bondingCurve.queryFilter(filter, initialFromBlock, currentBlock),
+                  60000,
+                  2
+                ).catch(() => []);
                 
                 return events;
               } catch (error: any) {
@@ -197,19 +199,18 @@ export default function TokenChart({ tokenAddress, height = 300 }: TokenChartPro
             while (batchFrom < currentBlock) {
               const batchTo = Math.min(batchFrom + maxRangePerQuery, currentBlock);
               try {
-                const batchEvents = await Promise.race([
-                  bondingCurve.queryFilter(filter, batchFrom, batchTo),
-                  new Promise<any[]>((resolve) => {
-                    setTimeout(() => resolve([]), 20000);
-                  })
-                ]).catch(() => []);
+                const batchEvents = await loadWithTimeout(
+                  () => bondingCurve.queryFilter(filter, batchFrom, batchTo),
+                  60000,
+                  2
+                ).catch(() => []);
                 
                 allEvents.push(...batchEvents);
                 batchFrom = batchTo + 1;
                 
-                // Reduced delay between batches
+                // Increased delay between batches for RPC stability
                 if (batchFrom < currentBlock) {
-                  await new Promise(resolve => setTimeout(resolve, 200));
+                  await new Promise(resolve => setTimeout(resolve, 300));
                 }
               } catch (error: any) {
                 // Continue with next batch

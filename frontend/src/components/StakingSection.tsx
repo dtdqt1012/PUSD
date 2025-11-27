@@ -74,9 +74,9 @@ export default function StakingSection() {
           const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, signer);
           
           const [userStakes, userPusdStakes, claimable] = await Promise.allSettled([
-            loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
-            loadWithTimeout(stakingContract.getUserActivePUSDStakes(account), 5000).catch(() => []),
-            loadWithTimeout(rewardContract.getClaimableRewards(account), 5000).catch(() => 0n),
+            loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+            loadWithTimeout(() => stakingContract.getUserActivePUSDStakes(account), 5000).catch(() => []),
+            loadWithTimeout(() => rewardContract.getClaimableRewards(account), 5000).catch(() => 0n),
           ]);
           
           if (mountedRef.current) {
@@ -127,9 +127,9 @@ export default function StakingSection() {
             const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, signer);
             
             const [userStakes, userPusdStakes, claimable] = await Promise.allSettled([
-              loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
-              loadWithTimeout(stakingContract.getUserActivePUSDStakes(account), 5000).catch(() => []),
-              loadWithTimeout(rewardContract.getClaimableRewards(account), 5000).catch(() => 0n),
+              loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+              loadWithTimeout(() => stakingContract.getUserActivePUSDStakes(account), 5000).catch(() => []),
+              loadWithTimeout(() => rewardContract.getClaimableRewards(account), 5000).catch(() => 0n),
             ]);
             
             if (mountedRef.current) {
@@ -329,7 +329,7 @@ export default function StakingSection() {
       
       // Reload stakes
       const [userStakes] = await Promise.allSettled([
-        loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+        loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
       ]);
       if (userStakes.status === 'fulfilled') {
         setStakes(userStakes.value);

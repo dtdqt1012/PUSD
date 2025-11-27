@@ -83,13 +83,13 @@ export default function BalanceCard() {
           ]);
 
             const results = await Promise.allSettled([
-              loadWithTimeout(oracleContract.getPOLPrice(), 5000).catch(() => null),
-              loadWithTimeout(pusdContract.totalSupply(), 5000).catch(() => null),
-              loadWithTimeout(vaultContract.getBalance(), 5000).catch(() => null),
-              loadWithTimeout(stakingContract.totalStaked(), 5000).catch(() => null),
-              loadWithTimeout(stakingContract.totalStakes(), 5000).catch(() => null),
-              loadWithTimeout(swapContract.getBalance(), 5000).catch(() => null),
-              loadWithTimeout(stakingContract.totalPUSDStaked(), 5000).catch(() => null),
+              loadWithTimeout(() => oracleContract.getPOLPrice(), 5000).catch(() => null),
+              loadWithTimeout(() => pusdContract.totalSupply(), 5000).catch(() => null),
+              loadWithTimeout(() => vaultContract.getBalance(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalStaked(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalStakes(), 5000).catch(() => null),
+              loadWithTimeout(() => swapContract.getBalance(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalPUSDStaked(), 5000).catch(() => null),
             ]);
 
           if (!mountedRef.current) return;
@@ -132,12 +132,12 @@ export default function BalanceCard() {
             const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, provider);
             
             const [polBal, pusdBal, userColl, points, claimable, userStakes] = await Promise.allSettled([
-              loadWithTimeout(provider.getBalance(account), 5000).catch(() => null),
-              loadWithTimeout(pusdContract.balanceOf(account), 5000).catch(() => null),
-              loadWithTimeout(vaultContract.userCollateral(account), 5000).catch(() => null),
-              loadWithTimeout(stakingContract.getUserTotalPoints(account), 5000).catch(() => null),
-              loadWithTimeout(rewardContract.getClaimableRewards(account), 5000).catch(() => null),
-              loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+              loadWithTimeout(() => provider.getBalance(account), 5000).catch(() => null),
+              loadWithTimeout(() => pusdContract.balanceOf(account), 5000).catch(() => null),
+              loadWithTimeout(() => vaultContract.userCollateral(account), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.getUserTotalPoints(account), 5000).catch(() => null),
+              loadWithTimeout(() => rewardContract.getClaimableRewards(account), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
             ]);
             
             const totalColl = userColl.status === 'fulfilled' && userColl.value ? userColl.value : 0n;
@@ -198,13 +198,13 @@ export default function BalanceCard() {
             ]);
 
             const results = await Promise.allSettled([
-              loadWithTimeout(oracleContract.getPOLPrice(), 5000).catch(() => null),
-              loadWithTimeout(pusdContract.totalSupply(), 5000).catch(() => null),
-              loadWithTimeout(vaultContract.getBalance(), 5000).catch(() => null),
-              loadWithTimeout(stakingContract.totalStaked(), 5000).catch(() => null),
-              loadWithTimeout(stakingContract.totalStakes(), 5000).catch(() => null),
-              loadWithTimeout(swapContract.getBalance(), 5000).catch(() => null),
-              loadWithTimeout(stakingContract.totalPUSDStaked(), 5000).catch(() => null),
+              loadWithTimeout(() => oracleContract.getPOLPrice(), 5000).catch(() => null),
+              loadWithTimeout(() => pusdContract.totalSupply(), 5000).catch(() => null),
+              loadWithTimeout(() => vaultContract.getBalance(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalStaked(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalStakes(), 5000).catch(() => null),
+              loadWithTimeout(() => swapContract.getBalance(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalPUSDStaked(), 5000).catch(() => null),
             ]);
 
             if (!mountedRef.current) return;
@@ -247,12 +247,12 @@ export default function BalanceCard() {
                 const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, provider);
                 
                 const [polBal, pusdBal, userColl, points, claimable, userStakes] = await Promise.allSettled([
-                  loadWithTimeout(provider.getBalance(account), 5000).catch(() => null),
-                  loadWithTimeout(pusdContract.balanceOf(account), 5000).catch(() => null),
-                  loadWithTimeout(vaultContract.userCollateral(account), 5000).catch(() => null),
-                  loadWithTimeout(stakingContract.getUserTotalPoints(account), 5000).catch(() => null),
-                  loadWithTimeout(rewardContract.getClaimableRewards(account), 5000).catch(() => null),
-                  loadWithTimeout(stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+                  loadWithTimeout(() => provider.getBalance(account), 5000).catch(() => null),
+                  loadWithTimeout(() => pusdContract.balanceOf(account), 5000).catch(() => null),
+                  loadWithTimeout(() => vaultContract.userCollateral(account), 5000).catch(() => null),
+                  loadWithTimeout(() => stakingContract.getUserTotalPoints(account), 5000).catch(() => null),
+                  loadWithTimeout(() => rewardContract.getClaimableRewards(account), 5000).catch(() => null),
+                  loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
                 ]);
                 
                 const totalColl = userColl.status === 'fulfilled' && userColl.value ? userColl.value : 0n;

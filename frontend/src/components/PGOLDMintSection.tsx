@@ -44,25 +44,25 @@ export default function PGOLDMintSection() {
         ]);
 
         const [balance, fee, price, minAmount] = await Promise.allSettled([
-          loadWithTimeout(pusdContract.balanceOf(account), 15000).catch((err) => {
+          loadWithTimeout(() => pusdContract.balanceOf(account), 15000).catch((err) => {
             if (err?.message !== 'Timeout') {
               console.warn('Failed to load PUSD balance:', err);
             }
             return null;
           }),
-          loadWithTimeout(vaultContract.mintFeeBPS(), 15000).catch((err) => {
+          loadWithTimeout(() => vaultContract.mintFeeBPS(), 15000).catch((err) => {
             if (err?.message !== 'Timeout') {
               console.warn('Failed to load mint fee:', err);
             }
             return null;
           }),
-          loadWithTimeout(oracleContract.getGoldPrice(), 15000).catch((err) => {
+          loadWithTimeout(() => oracleContract.getGoldPrice(), 15000).catch((err) => {
             if (err?.message !== 'Timeout') {
               console.warn('Failed to load gold price:', err);
             }
             return null;
           }),
-          loadWithTimeout(vaultContract.minMintAmount(), 15000).catch((err) => {
+          loadWithTimeout(() => vaultContract.minMintAmount(), 15000).catch((err) => {
             if (err?.message !== 'Timeout') {
               console.warn('Failed to load minimum mint amount:', err);
             }
@@ -129,7 +129,7 @@ export default function PGOLDMintSection() {
         );
 
         const pgoldAmount = await loadWithTimeout(
-          vaultContract.getMintablePGOLD(parseAmount(pusdAmount)),
+          () => vaultContract.getMintablePGOLD(parseAmount(pusdAmount)),
           5000
         );
 

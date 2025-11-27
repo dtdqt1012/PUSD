@@ -58,8 +58,9 @@ export default function Leaderboard() {
           for (const range of searchRanges) {
             try {
               const firstStakedEvents = await loadWithTimeout(
-                stakingContract.queryFilter(stakingContract.filters.Staked(), range.from, range.to),
-                10000
+                () => stakingContract.queryFilter(stakingContract.filters.Staked(), range.from, range.to),
+                30000,
+                2
               ).catch(() => []);
               
               if (firstStakedEvents.length > 0) {
@@ -79,14 +80,15 @@ export default function Leaderboard() {
         // Query events with pagination to get all data from deployment
         const queryWithPagination = async (filter: any): Promise<EventLog[]> => {
           const totalRange = currentBlock - fromBlock;
-          const maxRangePerQuery = 200000;
+          const maxRangePerQuery = 100000; // Reduced for better reliability
           
           // If range is small, query directly
           if (totalRange <= maxRangePerQuery) {
             try {
               const events = await loadWithTimeout(
-                stakingContract.queryFilter(filter, fromBlock, currentBlock),
-                20000
+                () => stakingContract.queryFilter(filter, fromBlock, currentBlock),
+                60000,
+                2
               ).catch(() => []);
               return events.filter((e): e is EventLog => 'args' in e) as EventLog[];
             } catch (error) {
@@ -102,8 +104,9 @@ export default function Leaderboard() {
             const batchTo = Math.min(batchFrom + maxRangePerQuery, currentBlock);
             try {
               const batchEvents = await loadWithTimeout(
-                stakingContract.queryFilter(filter, batchFrom, batchTo),
-                20000
+                () => stakingContract.queryFilter(filter, batchFrom, batchTo),
+                60000,
+                2
               ).catch(() => []);
               
               const filteredEvents = batchEvents.filter((e): e is EventLog => 'args' in e) as EventLog[];
@@ -111,7 +114,7 @@ export default function Leaderboard() {
               batchFrom = batchTo + 1;
               
               if (batchFrom < currentBlock) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 300)); // Increased delay for RPC stability
               }
             } catch (error) {
               // Continue with next batch even if this one failed
@@ -172,8 +175,9 @@ export default function Leaderboard() {
           const batchPromises = batch.map(async (user) => {
             try {
               const points = await loadWithTimeout(
-                stakingContract.getUserTotalPoints(user),
-                10000 // Longer timeout for batch processing
+                () => stakingContract.getUserTotalPoints(user),
+                30000,
+                2
               ).catch(() => 0n);
 
               if (points > 0n) {
