@@ -319,7 +319,7 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
         height: height
       }}>
         <div style={{ fontSize: '0.75rem', color: '#888' }}>
-          <span style={{ color: '#00ff00' }}>&gt;</span> {loadingProgress || 'Loading TVL chart...'}
+          <span style={{ color: '#00ff00' }}>&gt;</span> Loading TVL chart...
         </div>
       </div>
     );

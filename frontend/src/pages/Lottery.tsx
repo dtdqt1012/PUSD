@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useWeb3 } from '../hooks/useWeb3';
 import { CONTRACTS } from '../config/contracts';
 import { ethers } from 'ethers';
-import { useNotification } from '../contexts/NotificationContext';
 import BuyTickets from '../components/lottery/BuyTickets';
 import MyTickets from '../components/lottery/MyTickets';
 import LotteryStats from '../components/lottery/LotteryStats';
