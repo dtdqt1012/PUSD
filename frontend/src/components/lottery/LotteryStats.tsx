@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useWeb3 } from '../../hooks/useWeb3';
 import { CONTRACTS } from '../../config/contracts';
-import { ethers } from 'ethers';
 
 export default function LotteryStats() {
   const { provider } = useWeb3();

@@ -27,12 +27,6 @@ export default function LotteryResults() {
     
     setLoading(true);
     try {
-      const lotteryContract = new ethers.Contract(
-        CONTRACTS.PUSDLottery.address,
-        CONTRACTS.PUSDLottery.abi,
-        provider
-      );
-
       // Load recent draws (simplified - in production, use events)
       // For now, show placeholder
       setResults([]);

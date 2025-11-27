@@ -84,10 +84,11 @@ export default function Leaderboard() {
           // If range is small, query directly
           if (totalRange <= maxRangePerQuery) {
             try {
-              return await loadWithTimeout(
+              const events = await loadWithTimeout(
                 stakingContract.queryFilter(filter, fromBlock, currentBlock),
                 20000
               ).catch(() => []);
+              return events.filter((e): e is EventLog => 'args' in e) as EventLog[];
             } catch (error) {
               return [];
             }
@@ -105,7 +106,8 @@ export default function Leaderboard() {
                 20000
               ).catch(() => []);
               
-              allEvents.push(...batchEvents);
+              const filteredEvents = batchEvents.filter((e): e is EventLog => 'args' in e) as EventLog[];
+              allEvents.push(...filteredEvents);
               batchFrom = batchTo + 1;
               
               if (batchFrom < currentBlock) {
@@ -119,7 +121,7 @@ export default function Leaderboard() {
           
           // Remove duplicates
           const uniqueEvents = allEvents.filter((event, index, self) =>
-            index === self.findIndex(e => e.transactionHash === event.transactionHash && e.logIndex === event.logIndex)
+            index === self.findIndex(e => e.transactionHash === event.transactionHash && e.index === event.index)
           );
           
           return uniqueEvents;

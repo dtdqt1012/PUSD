@@ -17,7 +17,6 @@ export default function TVLChart({ height = 300 }: { height?: number }) {
   const [tvlData, setTvlData] = useState<TVLPoint[]>([]);
   const [currentTVL, setCurrentTVL] = useState<string>('0');
   const [loading, setLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState<string>('');
 
   useEffect(() => {
     if (!provider) return;

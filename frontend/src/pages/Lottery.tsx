@@ -10,8 +10,7 @@ import LotteryResults from '../components/lottery/LotteryResults';
 import '../index.css';
 
 export default function Lottery() {
-  const { provider, account } = useWeb3();
-  const { showNotification } = useNotification();
+  const { provider } = useWeb3();
   const [activeTab, setActiveTab] = useState<'buy' | 'tickets' | 'stats' | 'results'>('buy');
   const [currentDraw, setCurrentDraw] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -107,7 +106,6 @@ export default function Lottery() {
     // Daily draw at 20:00 UTC
     const now = new Date();
     const utcHour = now.getUTCHours();
-    const utcMinute = now.getUTCMinutes();
     
     let nextDraw = new Date(now);
     nextDraw.setUTCHours(20, 0, 0, 0);
@@ -195,7 +193,6 @@ export default function Lottery() {
           <div className="lottery-content">
             {activeTab === 'buy' && (
               <BuyTickets
-                currentDraw={currentDraw}
                 onPurchaseSuccess={() => {
                   loadCurrentDraw();
                   setActiveTab('tickets');

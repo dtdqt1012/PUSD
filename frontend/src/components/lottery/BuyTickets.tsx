@@ -6,11 +6,10 @@ import { useNotification } from '../../contexts/NotificationContext';
 import { formatBalance } from '../../utils/format';
 
 interface BuyTicketsProps {
-  currentDraw: any;
   onPurchaseSuccess: () => void;
 }
 
-export default function BuyTickets({ currentDraw, onPurchaseSuccess }: BuyTicketsProps) {
+export default function BuyTickets({ onPurchaseSuccess }: BuyTicketsProps) {
   const { provider, account, signer } = useWeb3();
   const { showNotification } = useNotification();
   const [quantity, setQuantity] = useState(1);
