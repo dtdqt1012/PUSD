@@ -537,6 +537,37 @@
         "inputs":  [
 
                    ],
+        "name":  "checkDrawTime",
+        "outputs":  [
+                        {
+                            "internalType":  "bool",
+                            "name":  "isDailyTime",
+                            "type":  "bool"
+                        },
+                        {
+                            "internalType":  "bool",
+                            "name":  "isWeeklyTime",
+                            "type":  "bool"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "executeDraw",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
         "name":  "currentDrawId",
         "outputs":  [
                         {

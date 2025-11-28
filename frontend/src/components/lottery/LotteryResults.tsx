@@ -76,44 +76,61 @@ export default function LotteryResults() {
       const loadedResults = await Promise.all(drawPromises);
       const validResults = loadedResults.filter((r): r is DrawResult => r !== null);
       
-      // Load winners for each draw from RewardClaimed events
+      // Load all RewardClaimed events once (optimized)
+      const rewardClaimedFilter = lotteryContract.filters.RewardClaimed();
+      const currentBlock = await provider.getBlockNumber();
+      const fromBlock = Math.max(0, currentBlock - 500000); // Reduced to 500k blocks
+      
+      let allRewardEvents: any[] = [];
+      try {
+        allRewardEvents = await lotteryContract.queryFilter(
+          rewardClaimedFilter,
+          fromBlock,
+          currentBlock
+        );
+      } catch (error) {
+        console.error('Error loading reward events:', error);
+      }
+
+      // Load winners for each draw (optimized - batch ticket queries)
       const resultsWithWinners = await Promise.all(
         validResults.map(async (result) => {
           try {
-            // Query RewardClaimed events for this draw
-            // We need to get tickets for this draw and check which ones were claimed
-            // For now, we'll query all RewardClaimed events and filter by drawId
-            const rewardClaimedFilter = lotteryContract.filters.RewardClaimed();
-            const currentBlock = await provider.getBlockNumber();
-            const fromBlock = Math.max(0, currentBlock - 1000000); // Last 1M blocks
-            
-            const events = await lotteryContract.queryFilter(
-              rewardClaimedFilter,
-              fromBlock,
-              currentBlock
-            );
-            
             const winners: Winner[] = [];
-            for (const event of events) {
+            
+            // Filter events that might belong to this draw
+            const potentialEvents = allRewardEvents.filter((event) => {
+              if ('args' in event && event.args) {
+                return true; // Will check drawId later
+              }
+              return false;
+            });
+
+            // Batch query tickets (limit to avoid too many calls)
+            const ticketQueries = potentialEvents.slice(0, 100).map(async (event) => {
               try {
-                // Type guard: check if event is EventLog
                 if ('args' in event && event.args) {
-                  // Get ticket info to check drawId
                   const ticket = await lotteryContract.getTicket(event.args.ticketId);
                   if (ticket.drawId.toString() === result.drawId && ticket.claimed) {
-                    winners.push({
+                    return {
                       address: event.args.user,
                       ticketId: event.args.ticketId.toString(),
                       ticketNumber: ticket.number.toString().padStart(6, '0'),
                       prizeAmount: ethers.formatEther(event.args.amount),
                       prizeTier: event.args.tier,
-                    });
+                    };
                   }
                 }
               } catch (error) {
                 // Skip invalid tickets
               }
-            }
+              return null;
+            });
+
+            const ticketResults = await Promise.all(ticketQueries);
+            ticketResults.forEach((winner) => {
+              if (winner) winners.push(winner);
+            });
             
             return {
               ...result,
