@@ -18,6 +18,11 @@ const faqData: FAQItem[] = [
     answer: 'You can mint PUSD by depositing POL into the Minting Vault. You will receive 60% of the USD value as PUSD, while 20% is automatically staked as POL and 20% is automatically staked as PUSD on your behalf. This automatic staking helps you start earning rewards immediately.'
   },
   {
+    category: 'Minting',
+    question: 'What is the tokenomics of PUSD minting?',
+    answer: 'PUSD Minting Tokenomics: When you deposit POL, the USD value is split as follows: 60% → Minted as PUSD (sent to your wallet), 20% → Automatically staked as POL (in StakingPool with your chosen lock period), 20% → Automatically staked as PUSD (in StakingPool with your chosen lock period). Minimum lock period: 30 days (you can choose 30, 60, 120, or 365 days). The remaining POL (after staking portion) stays in the vault as collateral backing your minted PUSD. This design ensures over-collateralization, automatic staking rewards, and maintains the 1:1 USD peg through collateral backing.'
+  },
+  {
     category: 'Staking',
     question: 'What are the lock periods for staking?',
     answer: 'You can stake POL or PUSD for 30, 60, 120, or 365 days. Longer lock periods provide higher point multipliers, resulting in more rewards. The multipliers are: 30 days (1x), 60 days (1.5x), 120 days (2x), and 365 days (3x).'
@@ -186,6 +191,81 @@ const faqData: FAQItem[] = [
     category: 'PFUN',
     question: 'Is PFUN safe to use?',
     answer: 'PFUN smart contracts are verified on PolygonScan and can be audited by anyone. However, always do your own research (DYOR) before launching or trading tokens. Be cautious of scams and only interact with tokens you trust. Never invest more than you can afford to lose.'
+  },
+  {
+    category: 'Lottery',
+    question: 'What is PUSD Lottery?',
+    answer: 'PUSD Lottery is a decentralized lottery system where you can buy tickets for 0.1 PUSD each. Each ticket has a random 6-digit number (000000-999999). Draws happen daily at 20:00 UTC and weekly on Sundays. Winners are determined by matching their ticket numbers with the winning number, with prizes distributed across 5 tiers.'
+  },
+  {
+    category: 'Lottery',
+    question: 'How do I buy lottery tickets?',
+    answer: 'To buy tickets, connect your wallet and navigate to the Lottery page. Enter the number of tickets you want to buy (1-1000 per transaction). Each ticket costs 0.1 PUSD. You need to approve PUSD spending first, then click "Buy Tickets". Each ticket will be assigned a random 6-digit number automatically.'
+  },
+  {
+    category: 'Lottery',
+    question: 'What are the prize tiers?',
+    answer: 'There are 5 prize tiers: 1st Prize (50% of jackpot) - matches all 6 digits, 2nd Prize (20% of jackpot) - matches last 5 digits, 3rd Prize (10% of jackpot) - matches last 4 digits, 4th Prize (5% of jackpot) - matches last 3 digits, and Consolation Prize (1 PUSD) - matches last 2 digits. Multiple winners can share prizes in the same tier.'
+  },
+  {
+    category: 'Lottery',
+    question: 'How does the draw work?',
+    answer: 'Draws are automated and happen daily at 20:00 UTC, with special weekly draws on Sundays at the same time. The winning number is generated using a secure block-based randomness mechanism combined with a commit-reveal scheme for fairness. Anyone can trigger the draw by calling executeDraw() when it\'s time, or it can be automated using Gelato Network.'
+  },
+  {
+    category: 'Lottery',
+    question: 'What is the revenue split?',
+    answer: 'Ticket sales revenue is split as follows: 80% goes to the Jackpot Pool (prizes), 10% goes to RewardDistributor (rewards for stakers), 5% goes to Development Fund, and 5% is burned (deflationary mechanism). This ensures the lottery benefits the entire PUSD ecosystem.'
+  },
+  {
+    category: 'Lottery',
+    question: 'How do I claim my rewards?',
+    answer: 'After a draw is resolved, check your tickets in the "My Tickets" tab. If you have winning tickets, you\'ll see the prize amount and tier. Click "Claim Reward" for each winning ticket to receive your PUSD prize. All claims are manual - there is no auto-claim bot.'
+  },
+  {
+    category: 'Lottery',
+    question: 'Do I get free tickets for holding PUSD?',
+    answer: 'Yes! If you hold 100+ PUSD in your wallet, you are eligible for 1 free ticket per week. You can claim your free ticket in the "Buy Tickets" section. The free ticket eligibility resets weekly, so make sure to claim it before the week ends.'
+  },
+  {
+    category: 'Lottery',
+    question: 'When do draws happen?',
+    answer: 'Daily draws happen every day at 20:00 UTC. Weekly draws happen every Sunday at 20:00 UTC. The weekly draw typically has a larger jackpot pool. You can see the countdown timer on the Lottery page showing when the next draw will occur.'
+  },
+  {
+    category: 'Lottery',
+    question: 'How is the winning number generated?',
+    answer: 'The winning number is generated using a secure block-based randomness mechanism. The system uses blockhash, block.prevrandao, block.timestamp, and block.number combined with a commit-reveal scheme for additional fairness. The owner can commit a hash before the draw and reveal it later, ensuring the secret was unknown when tickets were sold.'
+  },
+  {
+    category: 'Lottery',
+    question: 'What happens if no one wins?',
+    answer: 'If no one matches the winning number, the jackpot rolls over to the next draw. This means the next draw will have an even larger jackpot pool, making it more attractive for players. The jackpot continues to grow until someone wins.'
+  },
+  {
+    category: 'Lottery',
+    question: 'Can I buy tickets for multiple draws?',
+    answer: 'Tickets are always for the current active draw. When a new draw starts, you can buy tickets for that draw. Each draw has its own draw ID, and tickets are tied to specific draws. Make sure to check results and claim rewards for completed draws.'
+  },
+  {
+    category: 'Lottery',
+    question: 'Is the lottery fair and secure?',
+    answer: 'Yes! The lottery uses a commit-reveal scheme for randomness, ensuring the winning number cannot be manipulated. The contract is verified on PolygonScan and uses OpenZeppelin security features (ReentrancyGuard, Pausable, Ownable). All draws and results are transparent and verifiable on-chain.'
+  },
+  {
+    category: 'Lottery',
+    question: 'What is the maximum number of tickets I can buy?',
+    answer: 'You can buy up to 1000 tickets per transaction. There is no limit on how many transactions you can make, so you can buy as many tickets as you want across multiple transactions. Each ticket costs 0.1 PUSD.'
+  },
+  {
+    category: 'Lottery',
+    question: 'How do I check if I won?',
+    answer: 'Go to the "My Tickets" tab on the Lottery page. Your tickets will show their status: "Pending" (draw not resolved), "No Prize" (didn\'t win), or "Won" with the prize amount and tier. Click "Claim Reward" to receive your prize if you won.'
+  },
+  {
+    category: 'Lottery',
+    question: 'What is the tokenomics of PUSD Lottery?',
+    answer: 'PUSD Lottery Tokenomics: Ticket Price: 0.1 PUSD per ticket. Revenue Split from ticket sales: 80% → Jackpot Pool (distributed as prizes), 10% → RewardDistributor (rewards for PUSD stakers), 5% → Development Fund, 5% → Burned (deflationary mechanism). Prize Distribution from jackpot: 1st Prize (50% of jackpot), 2nd Prize (20%), 3rd Prize (10%), 4th Prize (5%), Consolation Prize (1 PUSD fixed per winner). Free Tickets: Holders with 100+ PUSD get 1 free ticket per week. This tokenomics design ensures the lottery benefits the entire PUSD ecosystem by rewarding stakers, funding development, and reducing PUSD supply through burns.'
   }
 ];
 
@@ -219,7 +299,7 @@ export default function FAQ() {
           <span className="terminal-prompt">&gt;</span>
           <span>Frequently Asked Questions</span>
         </h1>
-        <p className="page-subtitle">Everything you need to know about PUSD, PGOLD, and PFUN</p>
+        <p className="page-subtitle">Everything you need to know about PUSD, PGOLD, PFUN, and Lottery</p>
       </div>
 
       <div className="faq-filters">
