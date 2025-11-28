@@ -62,6 +62,7 @@ export default function LotteryResults() {
                   jackpot: ethers.formatEther(draw.jackpot || 0),
                   timestamp: Number(draw.timestamp),
                   drawType: draw.drawType === 0 ? 0 : 1, // 0 = Daily, 1 = Weekly
+                  winners: [], // Will be populated later
                 };
               }
               return null;
@@ -95,16 +96,19 @@ export default function LotteryResults() {
             const winners: Winner[] = [];
             for (const event of events) {
               try {
-                // Get ticket info to check drawId
-                const ticket = await lotteryContract.getTicket(event.args.ticketId);
-                if (ticket.drawId.toString() === result.drawId && ticket.claimed) {
-                  winners.push({
-                    address: event.args.user,
-                    ticketId: event.args.ticketId.toString(),
-                    ticketNumber: ticket.number.toString().padStart(6, '0'),
-                    prizeAmount: ethers.formatEther(event.args.amount),
-                    prizeTier: event.args.tier,
-                  });
+                // Type guard: check if event is EventLog
+                if ('args' in event && event.args) {
+                  // Get ticket info to check drawId
+                  const ticket = await lotteryContract.getTicket(event.args.ticketId);
+                  if (ticket.drawId.toString() === result.drawId && ticket.claimed) {
+                    winners.push({
+                      address: event.args.user,
+                      ticketId: event.args.ticketId.toString(),
+                      ticketNumber: ticket.number.toString().padStart(6, '0'),
+                      prizeAmount: ethers.formatEther(event.args.amount),
+                      prizeTier: event.args.tier,
+                    });
+                  }
                 }
               } catch (error) {
                 // Skip invalid tickets
