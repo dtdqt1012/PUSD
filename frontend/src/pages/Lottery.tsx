@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWeb3 } from '../hooks/useWeb3';
 import { CONTRACTS } from '../config/contracts';
 import { ethers } from 'ethers';
+import { useNotification } from '../contexts/NotificationContext';
 import BuyTickets from '../components/lottery/BuyTickets';
 import MyTickets from '../components/lottery/MyTickets';
 import LotteryStats from '../components/lottery/LotteryStats';
@@ -9,15 +10,29 @@ import LotteryResults from '../components/lottery/LotteryResults';
 import '../index.css';
 
 export default function Lottery() {
-  const { provider } = useWeb3();
+  const { provider, signer, account } = useWeb3();
+  const { showNotification } = useNotification();
   const [activeTab, setActiveTab] = useState<'buy' | 'tickets' | 'stats' | 'results'>('buy');
   const [currentDraw, setCurrentDraw] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [timeUntilDraw, setTimeUntilDraw] = useState<string>('');
+  const [triggering, setTriggering] = useState(false);
+  const [canTrigger, setCanTrigger] = useState(false);
 
   useEffect(() => {
     if (provider && CONTRACTS.PUSDLottery) {
       loadCurrentDraw();
+      checkCanTrigger();
+    }
+  }, [provider]);
+
+  // Check if draw can be triggered
+  useEffect(() => {
+    if (provider && CONTRACTS.PUSDLottery) {
+      const interval = setInterval(() => {
+        checkCanTrigger();
+      }, 60000); // Check every minute
+      return () => clearInterval(interval);
     }
   }, [provider]);
 
@@ -116,6 +131,65 @@ export default function Lottery() {
     return Math.floor(nextDraw.getTime() / 1000);
   };
 
+  const checkCanTrigger = async () => {
+    if (!provider || !CONTRACTS.PUSDLottery) return;
+    
+    try {
+      const lotteryContract = new ethers.Contract(
+        CONTRACTS.PUSDLottery.address,
+        CONTRACTS.PUSDLottery.abi,
+        provider
+      );
+      
+      const [isDailyTime, isWeeklyTime] = await lotteryContract.checkDrawTime();
+      setCanTrigger(isDailyTime || isWeeklyTime);
+    } catch (error) {
+      console.error('Error checking draw time:', error);
+      setCanTrigger(false);
+    }
+  };
+
+  const handleTriggerDraw = async () => {
+    if (!signer || !CONTRACTS.PUSDLottery || !account) {
+      showNotification('Please connect your wallet', 'error');
+      return;
+    }
+
+    setTriggering(true);
+    try {
+      const lotteryContract = new ethers.Contract(
+        CONTRACTS.PUSDLottery.address,
+        CONTRACTS.PUSDLottery.abi,
+        signer
+      );
+
+      // Check draw time first (to avoid wasting gas)
+      const [isDailyTime, isWeeklyTime] = await lotteryContract.checkDrawTime();
+      if (!isDailyTime && !isWeeklyTime) {
+        showNotification('Not time for draw yet. Draw time is 20:00 UTC daily.', 'error');
+        setTriggering(false);
+        return;
+      }
+
+      showNotification('Triggering draw...', 'info');
+      const tx = await lotteryContract.executeDraw();
+      showNotification('Transaction sent! Waiting for confirmation...', 'info');
+      
+      await tx.wait();
+      showNotification('Draw triggered successfully!', 'success');
+      
+      // Reload draw info
+      await loadCurrentDraw();
+      await checkCanTrigger();
+    } catch (error: any) {
+      console.error('Error triggering draw:', error);
+      const errorMessage = error.reason || error.message || 'Failed to trigger draw';
+      showNotification(errorMessage, 'error');
+    } finally {
+      setTriggering(false);
+    }
+  };
+
   return (
     <div className="lottery-page">
       <div className="lottery-header">
@@ -159,6 +233,42 @@ export default function Lottery() {
               </div>
             </div>
           )}
+
+          {/* Trigger Draw Button */}
+          <div className="trigger-draw-section">
+            <div className="trigger-draw-info">
+              <span className="terminal-prompt">&gt;</span> Help trigger the draw and keep the lottery running!
+            </div>
+            <button
+              className={`btn-primary btn-trigger-draw ${canTrigger ? 'can-trigger' : ''}`}
+              onClick={handleTriggerDraw}
+              disabled={triggering || !account || !canTrigger}
+            >
+              {triggering ? (
+                <>
+                  <span className="terminal-prompt">&gt;</span> Triggering...
+                </>
+              ) : canTrigger ? (
+                <>
+                  <span className="terminal-prompt">&gt;</span> Trigger Draw Now
+                </>
+              ) : (
+                <>
+                  <span className="terminal-prompt">&gt;</span> Draw Time: 20:00 UTC
+                </>
+              )}
+            </button>
+            {!account && (
+              <div className="trigger-draw-hint">
+                Connect wallet to trigger draw
+              </div>
+            )}
+            {account && !canTrigger && (
+              <div className="trigger-draw-hint">
+                Draw can only be triggered at 20:00 UTC daily
+              </div>
+            )}
+          </div>
 
           {/* Tabs */}
           <div className="lottery-tabs">

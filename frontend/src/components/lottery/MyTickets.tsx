@@ -11,6 +11,8 @@ interface Ticket {
   claimed: boolean;
   prizeAmount: string;
   prizeTier: number;
+  winningNumber?: string;
+  drawResolved?: boolean;
 }
 
 export default function MyTickets() {
@@ -40,13 +42,30 @@ export default function MyTickets() {
       const ticketIds = await lotteryContract.getUserTickets(account);
       const ticketPromises = ticketIds.map(async (id: bigint) => {
         const ticket = await lotteryContract.getTicket(id);
+        const drawId = ticket.drawId.toString();
+        
+        // Get draw info to check if resolved and get winning number
+        let winningNumber = '';
+        let drawResolved = false;
+        try {
+          const draw = await lotteryContract.getDraw(drawId);
+          drawResolved = draw.resolved;
+          if (drawResolved) {
+            winningNumber = draw.winningNumber.toString().padStart(6, '0');
+          }
+        } catch (error) {
+          // Draw might not exist yet
+        }
+        
         return {
           ticketId: id.toString(),
           number: ticket.number.toString().padStart(6, '0'),
-          drawId: ticket.drawId.toString(),
+          drawId: drawId,
           claimed: ticket.claimed,
           prizeAmount: ethers.formatEther(ticket.prizeAmount || 0),
           prizeTier: ticket.prizeTier,
+          winningNumber: winningNumber,
+          drawResolved: drawResolved,
         };
       });
       
@@ -119,42 +138,70 @@ export default function MyTickets() {
       </h2>
       
       <div className="tickets-grid">
-        {tickets.map((ticket) => (
-          <div key={ticket.ticketId} className={`ticket-card ${ticket.prizeTier > 0 ? 'winner' : ''}`}>
-            <div className="ticket-header">
-              <div className="ticket-number">#{ticket.number}</div>
-              <div className="ticket-draw">Draw #{ticket.drawId}</div>
-            </div>
-            
-            {ticket.prizeTier > 0 && (
-              <div className="ticket-prize">
-                <div className="prize-tier">{getPrizeTierName(ticket.prizeTier)}</div>
-                <div className="prize-amount">
-                  {parseFloat(ticket.prizeAmount).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })} PUSD
-                </div>
-                {!ticket.claimed && (
-                  <button
-                    className="btn-primary btn-small"
-                    onClick={() => handleClaim(ticket.ticketId)}
-                    disabled={claiming === ticket.ticketId}
-                  >
-                    {claiming === ticket.ticketId ? 'Claiming...' : 'Claim Reward'}
-                  </button>
-                )}
-                {ticket.claimed && (
-                  <div className="claimed-badge">Claimed</div>
-                )}
+        {tickets.map((ticket) => {
+          const isWinner = ticket.prizeTier > 0;
+          const showResult = ticket.drawResolved;
+          
+          return (
+            <div key={ticket.ticketId} className={`ticket-card ${isWinner ? 'winner' : showResult ? 'no-prize' : 'pending'}`}>
+              <div className="ticket-header">
+                <div className="ticket-number">#{ticket.number}</div>
+                <div className="ticket-draw">Draw #{ticket.drawId}</div>
               </div>
-            )}
-            
-            {ticket.prizeTier === 0 && (
-              <div className="ticket-status">No prize</div>
-            )}
-          </div>
-        ))}
+              
+              {showResult && ticket.winningNumber && (
+                <div className="ticket-winning-info">
+                  <div className="winning-number-display">
+                    <span className="winning-label">Winning Number:</span>
+                    <span className="winning-number-value">{ticket.winningNumber}</span>
+                  </div>
+                  <div className="ticket-comparison">
+                    <span className="your-number">Your Number: {ticket.number}</span>
+                    <span className={`match-status ${isWinner ? 'match' : 'no-match'}`}>
+                      {isWinner ? '✓ MATCH!' : '✗ No Match'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              {!showResult && (
+                <div className="ticket-status pending-status">
+                  <span className="terminal-prompt">&gt;</span> Draw not resolved yet
+                </div>
+              )}
+              
+              {isWinner && (
+                <div className="ticket-prize">
+                  <div className="prize-tier">{getPrizeTierName(ticket.prizeTier)}</div>
+                  <div className="prize-amount">
+                    {parseFloat(ticket.prizeAmount).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })} PUSD
+                  </div>
+                  {!ticket.claimed && (
+                    <button
+                      className="btn-primary btn-small"
+                      onClick={() => handleClaim(ticket.ticketId)}
+                      disabled={claiming === ticket.ticketId}
+                    >
+                      {claiming === ticket.ticketId ? 'Claiming...' : 'Claim Reward'}
+                    </button>
+                  )}
+                  {ticket.claimed && (
+                    <div className="claimed-badge">✓ Claimed</div>
+                  )}
+                </div>
+              )}
+              
+              {showResult && ticket.prizeTier === 0 && (
+                <div className="ticket-status no-prize-status">
+                  <span className="terminal-prompt">&gt;</span> No prize - Better luck next time!
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
