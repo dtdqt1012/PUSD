@@ -231,7 +231,7 @@ export default function Lottery() {
       }
       
       showNotification('Transaction sent! Waiting for confirmation...', 'info');
-      const receipt = await tx.wait();
+      await tx.wait();
       
       // Check if previous draw was resolved
       try {
