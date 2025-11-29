@@ -30,7 +30,7 @@ export const CONTRACT_ADDRESSES = {
   pfunBondingCurve: '0x9441D35C5a5987622E51e6d1179FB48327Aa05a6',
     pfunCollateralLock: '0xC14Cf34dbe04D0e825EBEe34508a4938CD6b325E',
     // PUSD Lottery
-    pusdLottery: '0xE575b78d369F7aa6c35E96a6382Cc7EdDD2a606B',
+    pusdLottery: '0xF152592a14841AdEC6516704a61416E9ddC70015',
   };
 
 export const NETWORK_CONFIG = {

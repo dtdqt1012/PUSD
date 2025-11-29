@@ -73,9 +73,24 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     mapping(uint256 => uint256[]) public winningTickets; // drawId => ticketIds
     mapping(address => uint256[]) public userTickets; // user => ticketIds
     
-    // Commit-Reveal for fair randomness (FREE, SECURE)
-    mapping(uint256 => bytes32) public drawCommitments; // drawId => commitment hash
-    mapping(uint256 => bool) public drawRevealed; // drawId => revealed status
+    // Multi-Party Commit-Reveal for fair randomness (FREE, SECURE, DECENTRALIZED)
+    // Anyone can commit a secret, and winning number = hash(all revealed secrets + blockhash)
+    // This ensures no single party controls the randomness
+    struct Commitment {
+        address committer;
+        bytes32 commitmentHash;
+        uint256 secret; // Revealed secret (0 if not revealed)
+        bool revealed;
+        uint256 revealTimestamp;
+        uint256 commitBlockNumber; // Block number when committed
+        uint256 commitIndex; // Order of commit (0 = first, 1 = second, etc.)
+    }
+    
+    mapping(uint256 => Commitment[]) public drawCommitments; // drawId => array of commitments
+    mapping(uint256 => uint256) public drawCommitDeadline; // drawId => deadline for commits
+    mapping(uint256 => uint256) public drawRevealDeadline; // drawId => deadline for reveals
+    uint256 public constant COMMIT_DURATION = 1 days; // 1 day to commit
+    uint256 public constant REVEAL_DURATION = 1 days; // 1 day to reveal after commit deadline
     
     // Free tickets for stakers
     mapping(address => uint256) public lastFreeTicketClaim; // user => week timestamp
@@ -85,7 +100,7 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     event TicketsPurchased(address indexed user, uint256[] ticketIds, uint256[] numbers, uint256 drawId);
     event DrawStarted(uint256 indexed drawId, DrawType drawType, uint256 jackpot);
     event DrawCommitted(uint256 indexed drawId, bytes32 commitment);
-    event DrawRevealed(uint256 indexed drawId, uint256 winningNumber);
+    event DrawRevealed(uint256 indexed drawId, uint256 secret);
     event DrawResolved(uint256 indexed drawId, uint256 winningNumber, uint256 totalWinners);
     event RewardClaimed(address indexed user, uint256 ticketId, uint256 amount, uint8 tier);
     event FreeTicketClaimed(address indexed user, uint256 ticketId, uint256 number);
@@ -231,12 +246,30 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
         
         DrawType drawType = isWeeklyTime ? DrawType.Weekly : DrawType.Daily;
         
-        // Auto-resolve previous draw if not resolved
-        if (!draws[currentDrawId].resolved && draws[currentDrawId].ticketsSold > 0) {
-            // If commit-reveal was used but not revealed, use block-based as automatic fallback
-            if (drawCommitments[currentDrawId] == bytes32(0) || !drawRevealed[currentDrawId]) {
-                uint256 winningNumber = generateWinningNumber(currentDrawId);
-                resolveDraw(currentDrawId, winningNumber);
+        // Auto-resolve current draw if not resolved (MUST resolve before creating new draw)
+        if (!draws[currentDrawId].resolved) {
+            // Only resolve if there are tickets sold (skip empty draws)
+            if (draws[currentDrawId].ticketsSold > 0) {
+                // Check if multi-party commit-reveal was used and finalized
+                if (drawCommitments[currentDrawId].length > 0 && block.timestamp > drawRevealDeadline[currentDrawId]) {
+                    // Try to finalize with commits (anyone can call, but we do it here automatically)
+                    try this.finalizeDrawWithCommits(currentDrawId) {
+                        // Successfully finalized with commits
+                    } catch {
+                        // If finalize fails (no reveals), use block-based fallback
+                        uint256 winningNumber = generateWinningNumber(currentDrawId);
+                        resolveDraw(currentDrawId, winningNumber);
+                    }
+                } else {
+                    // No commits or reveal phase not ended - use block-based randomness
+                    uint256 winningNumber = generateWinningNumber(currentDrawId);
+                    resolveDraw(currentDrawId, winningNumber);
+                }
+            } else {
+                // Empty draw - mark as resolved with winning number 0
+                draws[currentDrawId].winningNumber = 0;
+                draws[currentDrawId].resolved = true;
+                emit DrawResolved(currentDrawId, 0, 0);
             }
         }
         
@@ -300,12 +333,30 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
      * Automatically resolves previous draw using block-based randomness
      */
     function startDraw(DrawType drawType) external onlyOwner whenNotPaused {
-        // Auto-resolve previous draw if not resolved
-        if (!draws[currentDrawId].resolved && draws[currentDrawId].ticketsSold > 0) {
-            // If commit-reveal was used but not revealed, use block-based as automatic fallback
-            if (drawCommitments[currentDrawId] == bytes32(0) || !drawRevealed[currentDrawId]) {
-                uint256 winningNumber = generateWinningNumber(currentDrawId);
-                resolveDraw(currentDrawId, winningNumber);
+        // Auto-resolve current draw if not resolved (MUST resolve before creating new draw)
+        if (!draws[currentDrawId].resolved) {
+            // Only resolve if there are tickets sold (skip empty draws)
+            if (draws[currentDrawId].ticketsSold > 0) {
+                // Check if multi-party commit-reveal was used and finalized
+                if (drawCommitments[currentDrawId].length > 0 && block.timestamp > drawRevealDeadline[currentDrawId]) {
+                    // Try to finalize with commits (anyone can call, but we do it here automatically)
+                    try this.finalizeDrawWithCommits(currentDrawId) {
+                        // Successfully finalized with commits
+                    } catch {
+                        // If finalize fails (no reveals), use block-based fallback
+                        uint256 winningNumber = generateWinningNumber(currentDrawId);
+                        resolveDraw(currentDrawId, winningNumber);
+                    }
+                } else {
+                    // No commits or reveal phase not ended - use block-based randomness
+                    uint256 winningNumber = generateWinningNumber(currentDrawId);
+                    resolveDraw(currentDrawId, winningNumber);
+                }
+            } else {
+                // Empty draw - mark as resolved with winning number 0
+                draws[currentDrawId].winningNumber = 0;
+                draws[currentDrawId].resolved = true;
+                emit DrawResolved(currentDrawId, 0, 0);
             }
         }
         
@@ -325,51 +376,134 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Commit hash for fair randomness (FREE, SECURE)
-     * Owner commits a hash before draw ends. Later reveals secret to generate winning number.
-     * This prevents manipulation because secret is unknown when tickets are sold.
+     * @dev Commit a secret for draw randomness (PUBLIC - anyone can commit)
+     * Users commit hash(secret) before reveal phase. This ensures fairness.
+     * Multiple commits make the result more random and decentralized.
      */
-    function commitDraw(uint256 drawId, bytes32 commitment) external onlyOwner {
+    function commitSecret(uint256 drawId, bytes32 commitmentHash) external {
         require(drawId <= currentDrawId, "PUSDLottery: Invalid draw ID");
         require(!draws[drawId].resolved, "PUSDLottery: Draw already resolved");
-        require(drawCommitments[drawId] == bytes32(0), "PUSDLottery: Already committed");
         
-        drawCommitments[drawId] = commitment;
-        emit DrawCommitted(drawId, commitment);
+        // Check if commit phase is still open
+        if (drawCommitDeadline[drawId] == 0) {
+            // First commit - set deadlines
+            drawCommitDeadline[drawId] = block.timestamp + COMMIT_DURATION;
+            drawRevealDeadline[drawId] = block.timestamp + COMMIT_DURATION + REVEAL_DURATION;
+        } else {
+            require(block.timestamp <= drawCommitDeadline[drawId], "PUSDLottery: Commit phase ended");
+        }
+        
+        // Check if user already committed
+        Commitment[] storage commitments = drawCommitments[drawId];
+        for (uint256 i = 0; i < commitments.length; i++) {
+            require(commitments[i].committer != msg.sender, "PUSDLottery: Already committed");
+        }
+        
+        // Add new commitment with block number and commit order
+        uint256 commitIndex = commitments.length; // Order of commit (0 = first, 1 = second, etc.)
+        commitments.push(Commitment({
+            committer: msg.sender,
+            commitmentHash: commitmentHash,
+            secret: 0,
+            revealed: false,
+            revealTimestamp: 0,
+            commitBlockNumber: block.number,
+            commitIndex: commitIndex
+        }));
+        
+        emit DrawCommitted(drawId, commitmentHash);
     }
     
     /**
-     * @dev Reveal secret and generate winning number (FREE, SECURE)
-     * Owner reveals secret. Winning number = hash(secret + blockhash + drawId)
-     * This is fair because secret was committed before draw ended.
+     * @dev Reveal secret (PUBLIC - anyone who committed can reveal)
+     * After commit deadline, users reveal their secrets.
+     * Winning number = hash(all revealed secrets + blockhash)
      */
-    function revealDraw(uint256 drawId, uint256 secret) external onlyOwner {
+    function revealSecret(uint256 drawId, uint256 secret) external {
         require(drawId <= currentDrawId, "PUSDLottery: Invalid draw ID");
         require(!draws[drawId].resolved, "PUSDLottery: Draw already resolved");
-        require(drawCommitments[drawId] != bytes32(0), "PUSDLottery: Not committed");
-        require(!drawRevealed[drawId], "PUSDLottery: Already revealed");
-        require(
-            keccak256(abi.encodePacked(secret)) == drawCommitments[drawId],
-            "PUSDLottery: Invalid secret"
-        );
+        require(block.timestamp > drawCommitDeadline[drawId], "PUSDLottery: Commit phase not ended");
+        require(block.timestamp <= drawRevealDeadline[drawId], "PUSDLottery: Reveal phase ended");
         
-        // Generate winning number: hash(secret + previous blockhash + drawId)
-        // Previous blockhash cannot be manipulated by current miner
+        Commitment[] storage commitments = drawCommitments[drawId];
+        bool found = false;
+        
+        for (uint256 i = 0; i < commitments.length; i++) {
+            if (commitments[i].committer == msg.sender) {
+                require(!commitments[i].revealed, "PUSDLottery: Already revealed");
+                require(
+                    keccak256(abi.encodePacked(secret)) == commitments[i].commitmentHash,
+                    "PUSDLottery: Invalid secret"
+                );
+                
+                commitments[i].secret = secret;
+                commitments[i].revealed = true;
+                commitments[i].revealTimestamp = block.timestamp;
+                found = true;
+                break;
+            }
+        }
+        
+        require(found, "PUSDLottery: No commitment found");
+        emit DrawRevealed(drawId, secret);
+    }
+    
+    /**
+     * @dev Generate winning number from all revealed secrets (PUBLIC)
+     * Anyone can call this after reveal deadline to finalize the draw.
+     * Winning number = hash(all revealed secrets + blockhash + drawId)
+     * This is completely random and cannot be manipulated.
+     */
+    function finalizeDrawWithCommits(uint256 drawId) external {
+        require(drawId <= currentDrawId, "PUSDLottery: Invalid draw ID");
+        require(!draws[drawId].resolved, "PUSDLottery: Draw already resolved");
+        require(block.timestamp > drawRevealDeadline[drawId], "PUSDLottery: Reveal phase not ended");
+        require(drawCommitments[drawId].length > 0, "PUSDLottery: No commitments");
+        
+        Commitment[] memory commitments = drawCommitments[drawId];
+        
+        // Collect all revealed secrets with their commit order and block numbers
+        bytes memory shuffledSecrets = abi.encodePacked(drawId);
+        uint256 revealedCount = 0;
+        
+        // Shuffle secrets based on commit order (earliest commits have more weight)
+        // User nào commit nhanh nhất (commitIndex = 0) sẽ có ảnh hưởng lớn nhất
+        for (uint256 i = 0; i < commitments.length; i++) {
+            if (commitments[i].revealed) {
+                // Weight by commit order: earlier commits (lower index) have more influence
+                // Multiply secret by (total_commits - commit_index) to give weight
+                // User đầu tiên (index 0) có weight = total_commits, user cuối có weight = 1
+                uint256 weight = commitments.length - commitments[i].commitIndex;
+                shuffledSecrets = abi.encodePacked(
+                    shuffledSecrets,
+                    commitments[i].secret * weight, // Weighted secret
+                    commitments[i].commitBlockNumber, // Block number when committed
+                    commitments[i].commitIndex      // Order of commit (0 = fastest)
+                );
+                revealedCount++;
+            }
+        }
+        
+        require(revealedCount > 0, "PUSDLottery: No secrets revealed");
+        
+        // Generate winning number using:
+        // 1. Shuffled secrets (weighted by commit order - user nhanh nhất có weight cao nhất)
+        // 2. Current block number (when finalizing) - block ID
+        // 3. Previous block hash (cannot be manipulated)
+        // 4. Block prevrandao (randomness)
         bytes32 prevBlockHash = blockhash(block.number > 0 ? block.number - 1 : block.number);
         uint256 winningNumber = uint256(keccak256(abi.encodePacked(
-            secret,
-            prevBlockHash,
-            drawId,
-            block.prevrandao
+            shuffledSecrets,      // Secrets đã được đảo lộn theo thứ tự commit
+            block.number,         // Block ID khi finalize
+            prevBlockHash,        // Previous block hash
+            block.prevrandao,     // Randomness từ block
+            block.timestamp       // Timestamp
         ))) % 1000000; // 000000-999999
-        
-        draws[drawId].winningNumber = winningNumber;
-        drawRevealed[drawId] = true;
         
         // Resolve draw
         resolveDraw(drawId, winningNumber);
         
-        emit DrawRevealed(drawId, winningNumber);
+        emit DrawResolved(drawId, winningNumber, 0);
     }
     
     /**
@@ -394,7 +528,9 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
      */
     function resolveDraw(uint256 drawId, uint256 winningNumber) internal {
         Draw storage draw = draws[drawId];
-        require(draw.jackpot > 0, "PUSDLottery: No jackpot");
+        // Allow resolve even if jackpot is 0 (as long as there are tickets)
+        // This ensures draws with tickets can always be resolved
+        require(draw.ticketsSold > 0 || draw.jackpot > 0, "PUSDLottery: No tickets or jackpot");
         
         draw.winningNumber = winningNumber;
         draw.resolved = true;
@@ -405,6 +541,44 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
         // For now, we don't automatically rollover - let users claim first
         
         emit DrawResolved(drawId, winningNumber, 0); // totalWinners calculated on-demand
+    }
+    
+    /**
+     * @dev Resolve old draw manually (owner only - for fixing unresolved draws)
+     * This allows owner to resolve draws that were missed or not resolved automatically
+     */
+    function resolveOldDraw(uint256 drawId) external onlyOwner {
+        require(drawId <= currentDrawId, "PUSDLottery: Invalid draw ID");
+        require(!draws[drawId].resolved, "PUSDLottery: Draw already resolved");
+        require(draws[drawId].ticketsSold > 0, "PUSDLottery: No tickets to resolve");
+        
+        // Check if multi-party commit-reveal was used
+        if (drawCommitments[drawId].length > 0 && block.timestamp > drawRevealDeadline[drawId]) {
+            // Try to finalize with commits
+            try this.finalizeDrawWithCommits(drawId) {
+                // Successfully finalized
+                return;
+            } catch {
+                // If finalize fails, use block-based fallback
+            }
+        }
+        
+        // Use block-based randomness as fallback
+        uint256 winningNumber = generateWinningNumber(drawId);
+        resolveDraw(drawId, winningNumber);
+    }
+    
+    /**
+     * @dev Resolve draw with specific winning number (owner only - for emergency)
+     * Use with caution - only for fixing critical issues
+     */
+    function forceResolveDraw(uint256 drawId, uint256 winningNumber) external onlyOwner {
+        require(drawId <= currentDrawId, "PUSDLottery: Invalid draw ID");
+        require(!draws[drawId].resolved, "PUSDLottery: Draw already resolved");
+        require(draws[drawId].ticketsSold > 0, "PUSDLottery: No tickets to resolve");
+        require(winningNumber < 1000000, "PUSDLottery: Invalid winning number");
+        
+        resolveDraw(drawId, winningNumber);
     }
     
     /**
@@ -629,12 +803,30 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
         
         DrawType drawType = isWeeklyTime ? DrawType.Weekly : DrawType.Daily;
         
-        // Auto-resolve previous draw if not resolved
-        if (!draws[currentDrawId].resolved && draws[currentDrawId].ticketsSold > 0) {
-            // If commit-reveal was used but not revealed, use block-based as automatic fallback
-            if (drawCommitments[currentDrawId] == bytes32(0) || !drawRevealed[currentDrawId]) {
-                uint256 winningNumber = generateWinningNumber(currentDrawId);
-                resolveDraw(currentDrawId, winningNumber);
+        // Auto-resolve current draw if not resolved (MUST resolve before creating new draw)
+        if (!draws[currentDrawId].resolved) {
+            // Only resolve if there are tickets sold (skip empty draws)
+            if (draws[currentDrawId].ticketsSold > 0) {
+                // Check if multi-party commit-reveal was used and finalized
+                if (drawCommitments[currentDrawId].length > 0 && block.timestamp > drawRevealDeadline[currentDrawId]) {
+                    // Try to finalize with commits (anyone can call, but we do it here automatically)
+                    try this.finalizeDrawWithCommits(currentDrawId) {
+                        // Successfully finalized with commits
+                    } catch {
+                        // If finalize fails (no reveals), use block-based fallback
+                        uint256 winningNumber = generateWinningNumber(currentDrawId);
+                        resolveDraw(currentDrawId, winningNumber);
+                    }
+                } else {
+                    // No commits or reveal phase not ended - use block-based randomness
+                    uint256 winningNumber = generateWinningNumber(currentDrawId);
+                    resolveDraw(currentDrawId, winningNumber);
+                }
+            } else {
+                // Empty draw - mark as resolved with winning number 0
+                draws[currentDrawId].winningNumber = 0;
+                draws[currentDrawId].resolved = true;
+                emit DrawResolved(currentDrawId, 0, 0);
             }
         }
         

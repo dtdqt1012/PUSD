@@ -141,11 +141,23 @@ export default function Lottery() {
         provider
       );
       
+      // Check contract's checkDrawTime first
       const [isDailyTime, isWeeklyTime] = await lotteryContract.checkDrawTime();
-      setCanTrigger(isDailyTime || isWeeklyTime);
+      
+      // Also check client-side: allow draw during entire hour (20:00-20:59 UTC)
+      const now = new Date();
+      const utcHour = now.getUTCHours();
+      const isDrawHour = utcHour === 20; // Only 20:00-20:59 UTC
+      
+      // Allow if contract says yes OR if it's draw hour
+      setCanTrigger(isDailyTime || isWeeklyTime || isDrawHour);
     } catch (error) {
       console.error('Error checking draw time:', error);
-      setCanTrigger(false);
+      // Fallback: check client-side only
+      const now = new Date();
+      const utcHour = now.getUTCHours();
+      const isDrawHour = utcHour === 20; // Only 20:00-20:59 UTC
+      setCanTrigger(isDrawHour);
     }
   };
 
@@ -164,23 +176,104 @@ export default function Lottery() {
       );
 
       // Check draw time first (to avoid wasting gas)
-      const [isDailyTime, isWeeklyTime] = await lotteryContract.checkDrawTime();
-      if (!isDailyTime && !isWeeklyTime) {
-        showNotification('Not time for draw yet. Draw time is 20:00 UTC daily.', 'error');
+      // But allow trying during entire hour (20:00-20:59 UTC)
+      const now = new Date();
+      const utcHour = now.getUTCHours();
+      const isDrawHour = utcHour === 20;
+      
+      if (!isDrawHour) {
+        showNotification('Draw time is 20:00-20:59 UTC daily. Please try again during that hour.', 'error');
         setTriggering(false);
         return;
       }
+      
+      // Still check contract's checkDrawTime for additional validation
+      const [isDailyTime, isWeeklyTime] = await lotteryContract.checkDrawTime();
+      if (!isDailyTime && !isWeeklyTime) {
+        // Contract might reject if already drew today, but let user try anyway
+        // The contract will give a clearer error message
+      }
 
       showNotification('Triggering draw...', 'info');
-      const tx = await lotteryContract.executeDraw();
-      showNotification('Transaction sent! Waiting for confirmation...', 'info');
       
-      await tx.wait();
+      // Try to execute draw
+      let tx;
+      try {
+        tx = await lotteryContract.executeDraw();
+      } catch (error: any) {
+        // Check specific error messages
+        const errorMessage = error.reason || error.message || '';
+        
+        if (errorMessage.includes('Not time for draw yet')) {
+          // Check if already drew today
+          try {
+            const currentDrawInfo = await lotteryContract.getCurrentDrawInfo();
+            const lastDrawTimestamp = currentDrawInfo.timestamp;
+            const lastDrawDate = new Date(Number(lastDrawTimestamp) * 1000);
+            const currentDate = new Date();
+            
+            // Check if same day
+            if (lastDrawDate.toDateString() === currentDate.toDateString()) {
+              showNotification('Draw already executed today. Next draw is tomorrow at 20:00 UTC.', 'error');
+            } else {
+              showNotification('Not time for draw yet. Draw time is 20:00-20:59 UTC daily.', 'error');
+            }
+          } catch (checkError) {
+            showNotification('Not time for draw yet. Draw time is 20:00-20:59 UTC daily.', 'error');
+          }
+        } else if (errorMessage.includes('Contract is paused')) {
+          showNotification('Lottery is currently paused. Please try again later.', 'error');
+        } else {
+          showNotification(errorMessage || 'Failed to trigger draw. Please check if it\'s draw time (20:00-20:59 UTC).', 'error');
+        }
+        setTriggering(false);
+        return;
+      }
+      
+      showNotification('Transaction sent! Waiting for confirmation...', 'info');
+      const receipt = await tx.wait();
+      
+      // Check if previous draw was resolved
+      try {
+        const lotteryContractRead = new ethers.Contract(
+          CONTRACTS.PUSDLottery.address,
+          CONTRACTS.PUSDLottery.abi,
+          provider
+        );
+        
+        const currentDrawId = await lotteryContractRead.currentDrawId();
+        const previousDrawId = Number(currentDrawId) - 1;
+        
+        if (previousDrawId > 0) {
+          const previousDraw = await lotteryContractRead.getDraw(previousDrawId);
+          console.log(`Previous Draw #${previousDrawId}: resolved=${previousDraw.resolved}, winningNumber=${previousDraw.winningNumber}, ticketsSold=${previousDraw.ticketsSold}`);
+          
+          if (!previousDraw.resolved && previousDraw.ticketsSold > 0) {
+            console.error(`⚠️ Previous Draw #${previousDrawId} was NOT resolved! This is a problem.`);
+            showNotification(`Warning: Previous draw #${previousDrawId} was not resolved. Please check contract.`, 'error');
+          } else if (previousDraw.resolved) {
+            console.log(`✅ Previous Draw #${previousDrawId} was resolved successfully. Winning number: ${previousDraw.winningNumber.toString().padStart(6, '0')}`);
+            showNotification(`Draw #${previousDrawId} resolved! Winning number: ${previousDraw.winningNumber.toString().padStart(6, '0')}`, 'success');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking previous draw:', error);
+      }
+      
       showNotification('Draw triggered successfully!', 'success');
+      
+      // Wait a bit for blockchain to update
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       // Reload draw info
       await loadCurrentDraw();
       await checkCanTrigger();
+      
+      // Force refresh MyTickets if it's the active tab
+      if (activeTab === 'tickets') {
+        // Trigger a custom event to refresh MyTickets
+        window.dispatchEvent(new CustomEvent('lottery-draw-triggered'));
+      }
     } catch (error: any) {
       console.error('Error triggering draw:', error);
       const errorMessage = error.reason || error.message || 'Failed to trigger draw';
@@ -265,7 +358,9 @@ export default function Lottery() {
             )}
             {account && !canTrigger && (
               <div className="trigger-draw-hint">
-                Draw can only be triggered at 20:00 UTC daily
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <span className="terminal-prompt">&gt;</span> Draw can be triggered from <strong>20:00 UTC</strong> to <strong>20:59 UTC</strong> daily
+                </div>
               </div>
             )}
           </div>

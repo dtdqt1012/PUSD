@@ -535,7 +535,7 @@ html {
   border-left: 4px solid;
   border-radius: 0;
   font-size: 1rem;
-  font-family: inherit;
+  font-family: 'Courier New', monospace;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: bold;
@@ -3365,6 +3365,7 @@ html {
   margin: 0 auto;
   padding: 2rem;
   color: var(--text-white);
+  font-family: 'Courier New', monospace;
 }
 
 .lottery-header {
@@ -3376,11 +3377,15 @@ html {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
   color: var(--text-green);
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  letter-spacing: 2px;
 }
 
 .lottery-subtitle {
   color: var(--text-gray);
   font-size: 1.1rem;
+  font-family: 'Courier New', monospace;
 }
 
 .lottery-loading {
@@ -3398,59 +3403,125 @@ html {
 
 .trigger-draw-section {
   margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: var(--bg-dark);
+  padding: 2rem;
+  background: var(--bg-black);
   border: 1px solid var(--border-gray);
-  border-radius: 4px;
+  border-left: 3px solid var(--text-green);
+  border-radius: 0;
   text-align: center;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.1);
 }
 
 .trigger-draw-info {
   color: var(--text-gray);
   margin-bottom: 1rem;
   font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
 }
 
 .btn-trigger-draw {
-  min-width: 250px;
-  padding: 1rem 2rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  transition: all 0.3s;
+  min-width: 280px;
+  padding: 1.25rem 2.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn-trigger-draw:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  background: var(--bg-dark) !important;
+  border-color: var(--border-gray) !important;
+  color: var(--text-gray) !important;
+  box-shadow: none !important;
 }
 
 .btn-trigger-draw.can-trigger {
-  background: linear-gradient(135deg, var(--text-green), #00cc00);
-  border-color: var(--text-green);
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
-  animation: pulse 2s infinite;
+  background: var(--bg-black);
+  border: 2px solid var(--text-green);
+  border-left: 4px solid var(--text-green);
+  color: var(--text-green);
+  box-shadow: 
+    0 0 15px rgba(0, 255, 0, 0.2),
+    inset 0 0 20px rgba(0, 255, 0, 0.05);
+  animation: terminal-glow 2s ease-in-out infinite;
+}
+
+.btn-trigger-draw.can-trigger::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 255, 0, 0.1),
+    transparent
+  );
+  transition: left 0.5s;
 }
 
 .btn-trigger-draw.can-trigger:hover:not(:disabled) {
-  background: linear-gradient(135deg, #00cc00, var(--text-green));
-  box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
-  transform: scale(1.05);
+  background: var(--bg-dark);
+  border-color: var(--text-cyan);
+  border-left-color: var(--text-cyan);
+  color: var(--text-cyan);
+  box-shadow: 
+    0 0 25px rgba(0, 255, 255, 0.3),
+    inset 0 0 30px rgba(0, 255, 255, 0.1);
+  transform: translateY(-2px);
 }
 
-@keyframes pulse {
+.btn-trigger-draw.can-trigger:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.btn-trigger-draw:not(.can-trigger) {
+  background: var(--bg-dark);
+  border: 2px solid var(--border-gray);
+  border-left: 4px solid var(--border-gray);
+  color: var(--text-gray);
+  box-shadow: none;
+}
+
+.btn-trigger-draw:not(.can-trigger):hover:not(:disabled) {
+  border-color: var(--text-gray);
+  border-left-color: var(--text-gray);
+  color: var(--text-white);
+}
+
+@keyframes terminal-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    box-shadow: 
+      0 0 15px rgba(0, 255, 0, 0.2),
+      inset 0 0 20px rgba(0, 255, 0, 0.05);
   }
   50% {
-    box-shadow: 0 0 30px rgba(0, 255, 0, 0.6);
+    box-shadow: 
+      0 0 20px rgba(0, 255, 0, 0.3),
+      inset 0 0 25px rgba(0, 255, 0, 0.08);
   }
 }
 
 .trigger-draw-hint {
-  margin-top: 0.75rem;
+  margin-top: 1rem;
   color: var(--text-gray);
-  font-size: 0.85rem;
-  font-style: italic;
+  font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
+  line-height: 1.6;
+}
+
+.trigger-draw-hint strong {
+  color: var(--text-cyan);
+  font-weight: bold;
 }
 
 .draw-info-card {
@@ -3466,12 +3537,15 @@ html {
   font-size: 0.85rem;
   color: var(--text-gray);
   margin-bottom: 0.5rem;
+  font-family: 'Courier New', monospace;
 }
 
 .draw-info-value {
   font-size: 1.5rem;
   font-weight: bold;
   color: var(--text-green);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
 }
 
 .lottery-tabs {
@@ -3524,15 +3598,32 @@ html {
 .buy-tickets-card h2 {
   margin-bottom: 1.5rem;
   color: var(--text-green);
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
 }
 
 .balance-info {
   display: flex;
-  justify-content: space-between;
-  padding: 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem;
   background: rgba(0, 255, 0, 0.05);
   border-radius: 4px;
-  margin-bottom: 1rem;
+  border-left: 2px solid var(--text-green);
+  margin-bottom: 1.5rem;
+  font-family: 'Courier New', monospace;
+}
+
+.balance-label {
+  color: var(--text-gray);
+  font-size: 0.9rem;
+}
+
+.balance-value {
+  color: var(--text-green);
+  font-weight: bold;
+  font-size: 1.3rem;
+  letter-spacing: 1px;
 }
 
 .free-ticket-banner {
@@ -3544,6 +3635,7 @@ html {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-family: 'Courier New', monospace;
 }
 
 .ticket-quantity {
@@ -3554,6 +3646,7 @@ html {
   display: block;
   margin-bottom: 0.5rem;
   color: var(--text-gray);
+  font-family: 'Courier New', monospace;
 }
 
 .quantity-controls {
@@ -3623,36 +3716,75 @@ html {
 
 .ticket-cost {
   margin-bottom: 1.5rem;
-  padding: 1rem;
+  padding: 1.25rem;
   background: rgba(0, 255, 0, 0.05);
   border-radius: 4px;
+  border-left: 2px solid var(--text-green);
+  font-family: 'Courier New', monospace;
 }
 
 .cost-line {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-gray);
+}
+
+.cost-line span:first-child {
+  color: var(--text-gray);
+}
+
+.cost-line span:last-child {
+  color: var(--text-white);
+  font-weight: 600;
 }
 
 .cost-line.total {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border-gray);
-  font-size: 1.1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 2px solid var(--border-gray);
+  font-size: 1.2rem;
+}
+
+.cost-line.total span:first-child {
+  color: var(--text-cyan);
+  font-weight: bold;
+}
+
+.cost-line.total strong {
+  color: var(--text-green);
+  font-size: 1.3rem;
+  letter-spacing: 1px;
 }
 
 .revenue-split-info {
   margin-bottom: 1.5rem;
-  padding: 1rem;
+  padding: 1.25rem;
   background: rgba(0, 255, 255, 0.05);
   border-radius: 4px;
+  border-left: 2px solid var(--text-cyan);
   font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
 }
 
 .split-item {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.split-item:last-child {
+  margin-bottom: 0;
+}
+
+.split-item span:first-child {
+  color: var(--text-cyan);
+  font-weight: bold;
+}
+
+.split-item span:last-child {
+  color: var(--text-gray);
 }
 
 .btn-large {
@@ -3670,6 +3802,8 @@ html {
 .my-tickets-container h2 {
   margin-bottom: 1.5rem;
   color: var(--text-green);
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
 }
 
 .tickets-grid {
@@ -3681,19 +3815,43 @@ html {
 .ticket-card {
   background: var(--bg-dark);
   border: 1px solid var(--border-gray);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 1.5rem;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.ticket-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--border-gray);
+  transition: all 0.3s ease;
 }
 
 .ticket-card:hover {
   border-color: var(--text-green);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+  transform: translateX(3px);
+}
+
+.ticket-card:hover::before {
+  background: var(--text-green);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
 }
 
 .ticket-card.winner {
   border-left: 3px solid var(--text-yellow);
   background: rgba(255, 255, 0, 0.05);
+}
+
+.ticket-card.winner::before {
+  background: var(--text-yellow);
+  width: 3px;
 }
 
 .ticket-header {
@@ -3748,13 +3906,18 @@ html {
 }
 
 /* My Tickets - Enhanced styles */
-.ticket-card.pending {
-  border-left: 2px solid var(--text-gray);
+.ticket-card.pending::before {
+  background: var(--text-gray);
+  width: 2px;
 }
 
 .ticket-card.no-prize {
-  border-left: 2px solid var(--text-gray);
   opacity: 0.7;
+}
+
+.ticket-card.no-prize::before {
+  background: var(--text-gray);
+  width: 2px;
 }
 
 .ticket-winning-info {
@@ -3816,13 +3979,51 @@ html {
 
 .pending-status {
   color: var(--text-gray);
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.pending-draw-info {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0, 255, 255, 0.05);
+  border-radius: 4px;
+  border-left: 2px solid var(--text-cyan);
+  font-size: 0.85rem;
+}
+
+.pending-draw-status {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.status-warning {
+  color: var(--text-yellow);
+}
+
+.status-info {
+  color: var(--text-cyan);
+}
+
+.pending-draw-details {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-gray);
+  color: var(--text-gray);
+  font-size: 0.8rem;
+}
+
+.loading-draw-info {
+  margin-top: 0.5rem;
+  color: var(--text-gray);
+  font-size: 0.85rem;
   font-style: italic;
-  padding: 0.5rem;
 }
 
 .no-prize-status {
   color: var(--text-gray);
   padding: 0.5rem;
+  text-align: center;
 }
 
 .btn-small {
@@ -3839,6 +4040,8 @@ html {
 .lottery-stats-container h2 {
   margin-bottom: 1.5rem;
   color: var(--text-green);
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
 }
 
 .stats-grid {
@@ -3860,12 +4063,15 @@ html {
   font-size: 0.9rem;
   color: var(--text-gray);
   margin-bottom: 0.5rem;
+  font-family: 'Courier New', monospace;
 }
 
 .stat-value {
   font-size: 1.8rem;
   font-weight: bold;
   color: var(--text-green);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
 }
 
 /* Results */
@@ -3877,6 +4083,8 @@ html {
 .lottery-results-container h2 {
   margin-bottom: 1.5rem;
   color: var(--text-green);
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
 }
 
 .results-list {
@@ -3949,6 +4157,7 @@ html {
 .result-detail span:first-child {
   font-size: 0.85rem;
   color: var(--text-gray);
+  font-family: 'Courier New', monospace;
 }
 
 .result-winners {
@@ -3962,6 +4171,7 @@ html {
   color: var(--text-green);
   margin-bottom: 1rem;
   font-weight: 600;
+  font-family: 'Courier New', monospace;
 }
 
 .winners-list {
@@ -3983,6 +4193,7 @@ html {
   font-weight: bold;
   color: var(--text-yellow);
   min-width: 30px;
+  font-family: 'Courier New', monospace;
 }
 
 .winner-info {
@@ -4001,12 +4212,14 @@ html {
 .winner-ticket {
   color: var(--text-gray);
   font-size: 0.85rem;
+  font-family: 'Courier New', monospace;
 }
 
 .winner-amount {
   color: var(--text-green);
   font-weight: 600;
   font-size: 0.95rem;
+  font-family: 'Courier New', monospace;
 }
 
 .no-winners {
@@ -4014,6 +4227,7 @@ html {
   font-style: italic;
   padding: 1rem;
   text-align: center;
+  font-family: 'Courier New', monospace;
 }
 
 .empty-state,
@@ -4024,6 +4238,7 @@ html {
   background: var(--bg-dark);
   border: 1px solid var(--border-gray);
   border-radius: 4px;
+  font-family: 'Courier New', monospace;
 }
 
 /* ============================================

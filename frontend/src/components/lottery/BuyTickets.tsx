@@ -77,7 +77,9 @@ export default function BuyTickets({ onPurchaseSuccess }: BuyTicketsProps) {
       );
       const allowance = await pusdContract.allowance(account, CONTRACTS.PUSDLottery.address);
       const totalCost = ethers.parseEther((quantity * TICKET_PRICE).toString());
-      setApproved(allowance >= totalCost);
+      // Check if allowance is sufficient (at least 100 PUSD or unlimited)
+      const minApproval = ethers.parseEther('100'); // Approve at least 100 PUSD
+      setApproved(allowance >= totalCost && allowance >= minApproval);
     } catch (error) {
       console.error('Error checking approval:', error);
     }
@@ -99,11 +101,12 @@ export default function BuyTickets({ onPurchaseSuccess }: BuyTicketsProps) {
         CONTRACTS.PUSDToken.abi,
         signer
       );
-      const totalCost = ethers.parseEther((quantity * TICKET_PRICE).toString());
-      const tx = await pusdContract.approve(CONTRACTS.PUSDLottery.address, totalCost);
+      // Approve unlimited (MaxUint256) so user only needs to approve once
+      const maxApproval = ethers.MaxUint256;
+      const tx = await pusdContract.approve(CONTRACTS.PUSDLottery.address, maxApproval);
       await tx.wait();
       setApproved(true);
-      showNotification('Approval successful!', 'success');
+      showNotification('Approval successful! You can now buy tickets without approving again.', 'success');
     } catch (error: any) {
       showNotification(error.message || 'Approval failed', 'error');
     } finally {
@@ -174,8 +177,12 @@ export default function BuyTickets({ onPurchaseSuccess }: BuyTicketsProps) {
         </h2>
         
         <div className="balance-info">
-          <span>Your PUSD Balance:</span>
-          <strong>{parseFloat(pusdBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PUSD</strong>
+          <div className="balance-label">
+            <span className="terminal-prompt">&gt;</span> Your PUSD Balance
+          </div>
+          <div className="balance-value">
+            {parseFloat(pusdBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PUSD
+          </div>
         </div>
 
         {canClaimFree && (
@@ -258,7 +265,7 @@ export default function BuyTickets({ onPurchaseSuccess }: BuyTicketsProps) {
             onClick={handleApprove}
             disabled={approving || buying}
           >
-            {approving ? 'Approving...' : `Approve ${totalCost.toFixed(2)} PUSD`}
+            {approving ? 'Approving...' : 'Approve PUSD'}
           </button>
         ) : (
           <button
