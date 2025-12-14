@@ -1,13 +1,6 @@
-import { useState, memo, useCallback } from 'react';
-import { CONTRACTS } from '../config/contracts';
+import { memo } from 'react';
 
 const FooterInfo = memo(function FooterInfo() {
-  const [showContracts, setShowContracts] = useState(false);
-  
-  const toggleContracts = useCallback(() => {
-    setShowContracts(prev => !prev);
-  }, []);
-  
   return (
     <footer style={{
       marginTop: '3rem',

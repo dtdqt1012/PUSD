@@ -140,12 +140,11 @@ export async function callWithRpcFallback<T>(
  * Create contract instance with fallback provider
  */
 export function createContractWithFallback(address: string, abi: any[]): any {
-  const fallbackProvider = createFallbackProvider();
-  
   // Return a proxy object that uses fallback provider for calls
   return new Proxy({}, {
     get(_target, prop) {
       if (typeof prop === 'string' && prop !== 'then' && prop !== 'constructor') {
+        const fallbackProvider = createFallbackProvider();
         // Return a function that uses fallback provider
         return (...args: any[]) => {
           return callWithRpcFallback(async (provider) => {

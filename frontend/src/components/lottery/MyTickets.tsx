@@ -378,7 +378,7 @@ export default function MyTickets({ isActive = false }: MyTicketsProps) {
       
       if (ticketIds.length <= SMALL_BATCH_THRESHOLD) {
         // Load all tickets in parallel for small amounts
-        const allPromises = ticketIds.map(async (id) => {
+        const allPromises = ticketIds.map(async (id: string) => {
           try {
             // Use callWithRpcFallback for each ticket to handle RPC errors
             const ticket = await callWithRpcFallback(async (rpcProvider) => {

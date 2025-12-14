@@ -3,7 +3,6 @@ import { Contract, EventLog } from 'ethers';
 import { useWeb3 } from '../hooks/useWeb3';
 import { CONTRACTS } from '../config/contracts';
 import { formatBalance } from '../utils/format';
-import { loadWithTimeout } from '../utils/loadWithTimeout';
 import { useExpandable } from '../hooks/useExpandable';
 import { callWithRpcFallback } from '../utils/rpcProvider';
 import { isRateLimitError, isRPCError } from '../utils/rpcHandler';
@@ -39,12 +38,6 @@ export default function Leaderboard() {
       setLoading(true);
 
       try {
-        const stakingContract = new Contract(
-          CONTRACTS.LockToEarnPool.address,
-          CONTRACTS.LockToEarnPool.abi,
-          provider
-        );
-
         const currentBlock = await callWithRpcFallback(async (rpcProvider) => {
           return await rpcProvider.getBlockNumber();
         }).catch(() => {

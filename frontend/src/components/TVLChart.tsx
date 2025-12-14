@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Contract, formatUnits } from 'ethers';
 import { useWeb3 } from '../hooks/useWeb3';
 import { CONTRACTS } from '../config/contracts';
@@ -47,12 +47,6 @@ export default function TVLChart() {
     setLoading(true);
     try {
       // Only get current TVL - no historical data
-      const [oracleContract, vaultContract, stakingContract, swapContract] = [
-        new Contract(CONTRACTS.OraclePriceFeed.address, CONTRACTS.OraclePriceFeed.abi, provider),
-        new Contract(CONTRACTS.MintingVault.address, CONTRACTS.MintingVault.abi, provider),
-        new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, provider),
-        new Contract(CONTRACTS.SwapPool.address, CONTRACTS.SwapPool.abi, provider),
-      ];
 
       // Get current TVL with RPC fallback
       const [polPrice, vaultPol, totalStaked, swapPoolReserves] = await Promise.all([

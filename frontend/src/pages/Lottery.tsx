@@ -21,30 +21,10 @@ export default function Lottery() {
   const [triggering, setTriggering] = useState(false);
   const [canTrigger, setCanTrigger] = useState(false);
 
-  const checkOwner = async () => {
-    if (!provider || !account || !CONTRACTS.PUSDLottery) {
-      setIsOwner(false);
-      return;
-    }
-    
-    try {
-      const lotteryContract = new ethers.Contract(
-        CONTRACTS.PUSDLottery.address,
-        CONTRACTS.PUSDLottery.abi,
-        provider
-      );
-      const owner = await lotteryContract.owner();
-      setIsOwner(owner.toLowerCase() === account.toLowerCase());
-    } catch (error) {
-      setIsOwner(false);
-    }
-  };
-
   useEffect(() => {
     if (provider && CONTRACTS.PUSDLottery) {
       loadCurrentDraw();
       checkCanTrigger();
-      checkOwner();
     }
   }, [provider, account]);
 

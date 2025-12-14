@@ -240,7 +240,6 @@ export default function TokenChart({ tokenAddress, height = 300, refreshTrigger 
             let batchCount = 0;
             
             // Query batches in parallel (up to 3 at a time) for faster loading
-            const batchPromises: Promise<any[]>[] = [];
             const batchRanges: Array<{from: number, to: number}> = [];
             
             // Prepare all batch ranges first
@@ -352,8 +351,6 @@ export default function TokenChart({ tokenAddress, height = 300, refreshTrigger 
         if (initialPusdRaised < 0n) initialPusdRaised = 0n;
         
         // Track cumulative tokensSold and pusdRaised from events (starting from initial)
-        let cumulativeTokensSold = initialTokensSold;
-        let cumulativePusdRaised = initialPusdRaised;
         
         // Add initial point (before any events)
         if (allEvents.length > 0) {
@@ -447,7 +444,6 @@ export default function TokenChart({ tokenAddress, height = 300, refreshTrigger 
           try {
             // Update cumulative values based on event type
             // event.args.tokensAmount is in wei, convert to actual token count
-            const tokensAmountBefore = chartTokensSold;
             if (event.type === 'buy') {
               const tokensAmount = Number(ethers.formatEther(event.args.tokensAmount));
               chartTokensSold += tokensAmount;

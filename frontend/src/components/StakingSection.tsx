@@ -6,7 +6,6 @@ import { CONTRACTS } from '../config/contracts';
 import { parseAmount, formatBalance } from '../utils/format';
 import { cache } from '../utils/cache';
 import { executeTransaction, getTransactionErrorMessage } from '../utils/transaction';
-import { loadWithTimeout } from '../utils/loadWithTimeout';
 import { isRateLimitError, isRPCError, rpcBatchHandler } from '../utils/rpcHandler';
 import { useExpandable } from '../hooks/useExpandable';
 import { getUserActiveStakes, getUserActivePUSDStakes, Stake, PUSDStake } from '../utils/stakingHelpers';

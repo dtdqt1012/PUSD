@@ -6,7 +6,6 @@ import { CONTRACTS } from '../config/contracts';
 import { parseAmount, formatBalance } from '../utils/format';
 import { executeTransaction, getTransactionErrorMessage } from '../utils/transaction';
 import { useExpandable } from '../hooks/useExpandable';
-import { isRateLimitError, isRPCError } from '../utils/rpcHandler';
 
 export default function SwapSection() {
   const { signer, account, isConnected, provider } = useWeb3();
