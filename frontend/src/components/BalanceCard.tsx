@@ -7,8 +7,8 @@ import { formatBalance, formatPrice } from '../utils/format';
 import { cache } from '../utils/cache';
 import TerminalNumber from './TerminalNumber';
 import { loadWithTimeout } from '../utils/loadWithTimeout';
-import { isRateLimitError, isRPCError, rpcBatchHandler } from '../utils/rpcHandler';
-import { getUserActiveStakes, Stake } from '../utils/stakingHelpers';
+import { rpcBatchHandler } from '../utils/rpcHandler';
+import { getUserActiveStakes } from '../utils/stakingHelpers';
 import { lazy, Suspense } from 'react';
 const TVLChart = lazy(() => import('./TVLChart'));
 

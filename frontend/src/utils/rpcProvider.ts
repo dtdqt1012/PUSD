@@ -144,7 +144,6 @@ export function createContractWithFallback(address: string, abi: any[]): any {
   return new Proxy({}, {
     get(_target, prop) {
       if (typeof prop === 'string' && prop !== 'then' && prop !== 'constructor') {
-        const fallbackProvider = createFallbackProvider();
         // Return a function that uses fallback provider
         return (...args: any[]) => {
           return callWithRpcFallback(async (provider) => {

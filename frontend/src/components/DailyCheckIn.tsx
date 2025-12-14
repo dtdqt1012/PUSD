@@ -6,7 +6,6 @@ import { CONTRACTS } from '../config/contracts';
 import { formatBalance } from '../utils/format';
 import { executeTransaction, getTransactionErrorMessage } from '../utils/transaction';
 import { loadWithTimeout } from '../utils/loadWithTimeout';
-import { isRateLimitError, isRPCError } from '../utils/rpcHandler';
 import { useExpandable } from '../hooks/useExpandable';
 
 interface CheckInData {
