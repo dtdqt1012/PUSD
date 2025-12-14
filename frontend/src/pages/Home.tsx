@@ -24,21 +24,6 @@ export default function Home() {
             <Link to="/app" className="btn-primary">
               Launch DApp
             </Link>
-            <Link to="/pfun" className="btn-secondary">
-              PFUN
-            </Link>
-            <Link to="/whitepaper" className="btn-secondary">
-              Read Whitepaper
-            </Link>
-            <a 
-              href="https://x.com/_PUSD" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="btn-secondary"
-              style={{ textDecoration: 'none' }}
-            >
-              X
-            </a>
           </div>
         </div>
         <div className="hero-stats">

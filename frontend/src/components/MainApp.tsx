@@ -56,7 +56,9 @@ export default function MainApp() {
     <NotificationProvider>
       <div className="app">
         <header className="header">
-          <h1>POLYGON USD</h1>
+          <Link to="/home" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <h1 style={{ cursor: 'pointer', margin: 0 }}>POLYGON USD</h1>
+          </Link>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <Link 
               to="/pfun" 
@@ -82,6 +84,31 @@ export default function MainApp() {
               }}
             >
               PFUN
+            </Link>
+            <Link 
+              to="/lottery" 
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'rgba(0, 255, 0, 0.1)',
+                border: '1px solid #00ff00',
+                borderRadius: '4px',
+                color: '#00ff00',
+                textDecoration: 'none',
+                fontFamily: 'Courier New, monospace',
+                fontSize: '0.9rem',
+                fontWeight: 'bold',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 255, 0, 0.2)';
+                e.currentTarget.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 255, 0, 0.1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              Lottery
             </Link>
             <WalletConnect />
           </div>
