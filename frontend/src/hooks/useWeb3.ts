@@ -2,21 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { BrowserProvider, Signer } from 'ethers';
 import { getEthereum } from '../utils/ethereum-safe';
 
-const POLYGON_CHAIN_ID = 137;
+const POLYGON_CHAIN_ID = 137; // Polygon Mainnet
 const POLYGON_MAINNET_PARAMS = {
   chainId: `0x${POLYGON_CHAIN_ID.toString(16)}`,
   chainName: 'Polygon Mainnet',
   nativeCurrency: {
-    name: 'POL',
-    symbol: 'POL',
+    name: 'MATIC',
+    symbol: 'MATIC',
     decimals: 18,
   },
   rpcUrls: [
-    'https://polygon-rpc.com',
-    'https://rpc.ankr.com/polygon',
-    'https://polygon.llamarpc.com',
-    'https://polygon.blockpi.network/v1/rpc/public',
-    'https://1rpc.io/matic',
+    'https://polygon-rpc.com', // Ankr (official partner) - Primary endpoint
+    'https://rpc.ankr.com/polygon', // Ankr alternative
+    'https://polygon.publicnode.com', // PublicNode fallback
   ],
   blockExplorerUrls: ['https://polygonscan.com'],
 };
@@ -52,7 +50,6 @@ export const useWeb3 = () => {
           });
           return true;
         } catch (addError) {
-          console.error('Failed to add Polygon network:', addError);
           alert('Please add Polygon network manually in MetaMask');
           return false;
         }
@@ -60,7 +57,6 @@ export const useWeb3 = () => {
         // User rejected the request
         return false;
       } else {
-        console.error('Failed to switch network:', switchError);
         return false;
       }
     } finally {
@@ -110,8 +106,18 @@ export const useWeb3 = () => {
       setAccount(accounts[0]?.address || '');
       setChainId(currentChainId);
     } catch (error: any) {
-      console.error('Failed to connect:', error);
-      if (error.code !== 4001) {
+      // Don't log user rejection errors (code 4001) or network detection errors
+      const errorCode = error?.code || error?.error?.code;
+      const errorMessage = error?.message || error?.error?.message || '';
+      const errorMessageStr = String(errorMessage);
+      
+      if (errorCode !== 4001 && 
+          errorCode !== 'ACTION_REJECTED' &&
+          !errorMessageStr.includes('wallet must has at least one account') &&
+          !errorMessageStr.includes('JsonRpcProvider failed to detect network') &&
+          !errorMessageStr.includes('cannot start up') &&
+          !errorMessageStr.includes('user rejected') &&
+          !errorMessageStr.includes('User denied')) {
         alert('Failed to connect wallet');
       }
     } finally {
@@ -150,8 +156,21 @@ export const useWeb3 = () => {
           setSigner(signer);
           setAccount(accounts[0]);
           setChainId(currentChainId);
-        } catch (error) {
-          console.error('Failed to update account:', error);
+        } catch (error: any) {
+          // Don't log user rejection errors (code 4001) or network detection errors
+          const errorCode = error?.code || error?.error?.code;
+          const errorMessage = error?.message || error?.error?.message || '';
+          const errorMessageStr = String(errorMessage);
+          
+          if (errorCode !== 4001 && 
+              errorCode !== 'ACTION_REJECTED' &&
+              !errorMessageStr.includes('wallet must has at least one account') &&
+              !errorMessageStr.includes('JsonRpcProvider failed to detect network') &&
+              !errorMessageStr.includes('cannot start up') &&
+              !errorMessageStr.includes('user rejected') &&
+              !errorMessageStr.includes('User denied')) {
+          // Failed to update account
+          }
         }
       }
     };
@@ -184,8 +203,21 @@ export const useWeb3 = () => {
           setAccount(accounts[0].address);
           setChainId(currentChainId);
         }
-      } catch (error) {
-        console.error('Failed to reconnect:', error);
+      } catch (error: any) {
+        // Don't log user rejection errors (code 4001) or network detection errors
+        const errorCode = error?.code || error?.error?.code;
+        const errorMessage = error?.message || error?.error?.message || '';
+        const errorMessageStr = String(errorMessage);
+        
+        if (errorCode !== 4001 && 
+            errorCode !== 'ACTION_REJECTED' &&
+            !errorMessageStr.includes('wallet must has at least one account') &&
+            !errorMessageStr.includes('JsonRpcProvider failed to detect network') &&
+            !errorMessageStr.includes('cannot start up') &&
+            !errorMessageStr.includes('user rejected') &&
+              !errorMessageStr.includes('User denied')) {
+        // Failed to reconnect
+        }
       }
     })();
 

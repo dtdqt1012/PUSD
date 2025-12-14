@@ -12,24 +12,21 @@ import "./PUSD.sol";
  */
 contract PFUNCollateralLock is Ownable, ReentrancyGuard {
     PUSDToken public pusdToken;
-    
-    // Lock configuration
+
     uint256 public defaultLockPeriod = 30 days;
-    uint256 public minCollateralPercentage = 10; // 10% minimum
-    uint256 public maxCollateralPercentage = 50; // 50% maximum
-    
-    // Token => Lock info
+    uint256 public minCollateralPercentage = 10; 
+    uint256 public maxCollateralPercentage = 50; 
+
     mapping(address => LockInfo) public locks;
-    
-    // Packed struct for gas optimization
+
     struct LockInfo {
-        address token;              // 20 bytes
-        address creator;            // 20 bytes
-        uint128 collateralAmount;   // Packed
-        uint64 lockStartTime;       // Packed
-        uint64 lockEndTime;         // Packed
-        bool isLocked;              // 1 byte
-        bool isUnlocked;            // 1 byte
+        address token;              
+        address creator;            
+        uint128 collateralAmount;   
+        uint64 lockStartTime;       
+        uint64 lockEndTime;         
+        bool isLocked;              
+        bool isUnlocked;            
     }
     
     event CollateralLocked(
@@ -67,14 +64,12 @@ contract PFUNCollateralLock is Ownable, ReentrancyGuard {
         
         uint256 period = lockPeriod > 0 ? lockPeriod : defaultLockPeriod;
         uint256 unlockTime = block.timestamp + period;
-        
-        // Transfer PUSD from creator
+
         require(
             pusdToken.transferFrom(msg.sender, address(this), collateralAmount),
             "PFUNCollateralLock: Transfer failed"
         );
-        
-        // Record lock (packed for gas optimization)
+
         locks[token] = LockInfo({
             token: token,
             creator: msg.sender,
@@ -101,8 +96,7 @@ contract PFUNCollateralLock is Ownable, ReentrancyGuard {
         uint256 amount = lock.collateralAmount;
         lock.isUnlocked = true;
         lock.isLocked = false;
-        
-        // Return collateral to creator
+
         require(
             pusdToken.transfer(lock.creator, amount),
             "PFUNCollateralLock: Unlock transfer failed"
@@ -124,8 +118,7 @@ contract PFUNCollateralLock is Ownable, ReentrancyGuard {
     function isCollateralLocked(address token) external view returns (bool) {
         return locks[token].isLocked && !locks[token].isUnlocked;
     }
-    
-    // Admin functions
+
     function setDefaultLockPeriod(uint256 _period) external onlyOwner {
         require(_period >= 7 days, "PFUNCollateralLock: Min 7 days");
         defaultLockPeriod = _period;
@@ -138,5 +131,4 @@ contract PFUNCollateralLock is Ownable, ReentrancyGuard {
         maxCollateralPercentage = max;
     }
 }
-
 

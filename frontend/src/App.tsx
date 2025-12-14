@@ -128,6 +128,14 @@ function App() {
             } 
           />
           <Route 
+            path="/pfun/:tokenAddress" 
+            element={
+              <Layout>
+                <PFUN />
+              </Layout>
+            } 
+          />
+          <Route 
             path="/lottery" 
             element={
               <Layout>

@@ -3,35 +3,62 @@ import { useWeb3 } from '../hooks/useWeb3';
 import { CONTRACTS } from '../config/contracts';
 import { ethers } from 'ethers';
 import { useNotification } from '../contexts/NotificationContext';
+import { cache } from '../utils/cache';
+import { callWithRpcFallback, createFallbackProvider } from '../utils/rpcProvider';
 import BuyTickets from '../components/lottery/BuyTickets';
 import MyTickets from '../components/lottery/MyTickets';
-import LotteryStats from '../components/lottery/LotteryStats';
+// LotteryStats removed to avoid RPC limit
 import LotteryResults from '../components/lottery/LotteryResults';
 import '../index.css';
 
 export default function Lottery() {
   const { provider, signer, account } = useWeb3();
   const { showNotification } = useNotification();
-  const [activeTab, setActiveTab] = useState<'buy' | 'tickets' | 'stats' | 'results'>('buy');
+  const [activeTab, setActiveTab] = useState<'buy' | 'tickets' | 'results'>('buy');
   const [currentDraw, setCurrentDraw] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [timeUntilDraw, setTimeUntilDraw] = useState<string>('');
   const [triggering, setTriggering] = useState(false);
   const [canTrigger, setCanTrigger] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+
+  const checkOwner = async () => {
+    if (!provider || !account || !CONTRACTS.PUSDLottery) {
+      setIsOwner(false);
+      return;
+    }
+    
+    try {
+      const lotteryContract = new ethers.Contract(
+        CONTRACTS.PUSDLottery.address,
+        CONTRACTS.PUSDLottery.abi,
+        provider
+      );
+      const owner = await lotteryContract.owner();
+      setIsOwner(owner.toLowerCase() === account.toLowerCase());
+    } catch (error) {
+      setIsOwner(false);
+    }
+  };
 
   useEffect(() => {
     if (provider && CONTRACTS.PUSDLottery) {
       loadCurrentDraw();
       checkCanTrigger();
+      checkOwner();
     }
-  }, [provider]);
+  }, [provider, account]);
 
-  // Check if draw can be triggered
+  // Check if draw can be triggered (with caching to reduce RPC calls)
   useEffect(() => {
     if (provider && CONTRACTS.PUSDLottery) {
+      // Check immediately
+      checkCanTrigger();
+      
+      // Then check every 30 seconds (more frequent for better UX)
       const interval = setInterval(() => {
         checkCanTrigger();
-      }, 60000); // Check every minute
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [provider]);
@@ -54,36 +81,57 @@ export default function Lottery() {
     return () => clearInterval(interval);
   }, [currentDraw]);
 
-  const loadCurrentDraw = async () => {
+  const loadCurrentDraw = async (silent = false) => {
     if (!provider || !CONTRACTS.PUSDLottery) {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
     
     // Check if contract address is valid (not zero address)
     if (CONTRACTS.PUSDLottery.address === '0x0000000000000000000000000000000000000000') {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
     
+    // Check cache first (cache for 30 seconds - balance between freshness and speed)
+    const cacheKey = 'lottery-current-draw';
+    const cached = cache.get<any>(cacheKey);
+    if (cached !== null) {
+      setCurrentDraw(cached);
+      if (!silent) setLoading(false);
+      
+      // Refresh in background if cache is older than 10 seconds
+      const cacheAge = Date.now() - (cache.getTimestamp(cacheKey) || 0);
+      if (cacheAge > 10000) {
+        // Load fresh data in background without blocking UI
+        loadCurrentDraw(true).catch(() => {});
+      }
+      return;
+    }
+    
+    if (!silent) setLoading(true);
     try {
-      const lotteryContract = new ethers.Contract(
-        CONTRACTS.PUSDLottery.address,
-        CONTRACTS.PUSDLottery.abi,
-        provider
-      );
-
-      const drawInfo = await lotteryContract.getCurrentDrawInfo();
-      setCurrentDraw({
+      // Use fallback provider for read operations
+      const drawInfo = await callWithRpcFallback(async (rpcProvider) => {
+        const contract = new ethers.Contract(
+          CONTRACTS.PUSDLottery.address,
+          CONTRACTS.PUSDLottery.abi,
+          rpcProvider
+        );
+        return await contract.getCurrentDrawInfo();
+      });
+      const drawData = {
         drawId: drawInfo.drawId.toString(),
         drawType: drawInfo.drawType,
         jackpot: ethers.formatEther(drawInfo.jackpot || 0),
         ticketsSold: drawInfo.ticketsSold.toString(),
         timestamp: drawInfo.timestamp.toString(),
         resolved: drawInfo.resolved,
-      });
+      };
+      setCurrentDraw(drawData);
+      // Cache for 30 seconds (faster refresh for lottery data)
+      cache.set(cacheKey, drawData, 30000);
     } catch (error) {
-      console.error('Error loading draw info:', error);
       // Set default values if contract call fails
       setCurrentDraw({
         drawId: '1',
@@ -94,7 +142,7 @@ export default function Lottery() {
         resolved: false,
       });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -134,15 +182,24 @@ export default function Lottery() {
   const checkCanTrigger = async () => {
     if (!provider || !CONTRACTS.PUSDLottery) return;
     
+    // Check cache first (cache for 30 seconds since draw time can change)
+    const cacheKey = 'lottery-can-trigger';
+    const cached = cache.get<boolean>(cacheKey);
+    if (cached !== null) {
+      setCanTrigger(cached);
+      return;
+    }
+    
     try {
-      const lotteryContract = new ethers.Contract(
-        CONTRACTS.PUSDLottery.address,
-        CONTRACTS.PUSDLottery.abi,
-        provider
-      );
-      
-      // Check contract's checkDrawTime first
-      const [isDailyTime, isWeeklyTime] = await lotteryContract.checkDrawTime();
+      // Use fallback provider for read operations
+      const [isDailyTime, isWeeklyTime] = await callWithRpcFallback(async (rpcProvider) => {
+        const contract = new ethers.Contract(
+          CONTRACTS.PUSDLottery.address,
+          CONTRACTS.PUSDLottery.abi,
+          rpcProvider
+        );
+        return await contract.checkDrawTime();
+      });
       
       // Also check client-side: allow draw during entire hour (20:00-20:59 UTC)
       const now = new Date();
@@ -150,9 +207,12 @@ export default function Lottery() {
       const isDrawHour = utcHour === 20; // Only 20:00-20:59 UTC
       
       // Allow if contract says yes OR if it's draw hour
-      setCanTrigger(isDailyTime || isWeeklyTime || isDrawHour);
+      const canTriggerValue = isDailyTime || isWeeklyTime || isDrawHour;
+      setCanTrigger(canTriggerValue);
+      // Cache for 30 seconds
+      cache.set(cacheKey, canTriggerValue, 30000);
     } catch (error) {
-      console.error('Error checking draw time:', error);
+      // Error checking draw time
       // Fallback: check client-side only
       const now = new Date();
       const utcHour = now.getUTCHours();
@@ -246,21 +306,24 @@ export default function Lottery() {
         
         if (previousDrawId > 0) {
           const previousDraw = await lotteryContractRead.getDraw(previousDrawId);
-          console.log(`Previous Draw #${previousDrawId}: resolved=${previousDraw.resolved}, winningNumber=${previousDraw.winningNumber}, ticketsSold=${previousDraw.ticketsSold}`);
           
           if (!previousDraw.resolved && previousDraw.ticketsSold > 0) {
-            console.error(`⚠️ Previous Draw #${previousDrawId} was NOT resolved! This is a problem.`);
             showNotification(`Warning: Previous draw #${previousDrawId} was not resolved. Please check contract.`, 'error');
           } else if (previousDraw.resolved) {
-            console.log(`✅ Previous Draw #${previousDrawId} was resolved successfully. Winning number: ${previousDraw.winningNumber.toString().padStart(6, '0')}`);
             showNotification(`Draw #${previousDrawId} resolved! Winning number: ${previousDraw.winningNumber.toString().padStart(6, '0')}`, 'success');
           }
         }
       } catch (error) {
-        console.error('Error checking previous draw:', error);
+        // Error checking previous draw
       }
       
       showNotification('Draw triggered successfully!', 'success');
+      
+      // Clear cache to force refresh
+      cache.delete('lottery-current-draw');
+      cache.delete('lottery-can-trigger');
+      cache.delete('lottery-stats');
+      cache.delete('lottery-results');
       
       // Wait a bit for blockchain to update
       await new Promise(resolve => setTimeout(resolve, 3000));
@@ -271,17 +334,20 @@ export default function Lottery() {
       
       // Force refresh MyTickets if it's the active tab
       if (activeTab === 'tickets') {
-        // Trigger a custom event to refresh MyTickets
-        window.dispatchEvent(new CustomEvent('lottery-draw-triggered'));
+        // Trigger a custom event to refresh MyTickets with draw ID
+        const resolvedDrawId = Number(currentDrawId) - 1;
+        window.dispatchEvent(new CustomEvent('lottery-draw-triggered', { 
+          detail: { drawId: resolvedDrawId } 
+        }));
       }
     } catch (error: any) {
-      console.error('Error triggering draw:', error);
       const errorMessage = error.reason || error.message || 'Failed to trigger draw';
       showNotification(errorMessage, 'error');
     } finally {
       setTriggering(false);
     }
   };
+
 
   return (
     <div className="lottery-page">
@@ -376,18 +442,25 @@ export default function Lottery() {
             <button
               className={`lottery-tab ${activeTab === 'tickets' ? 'active' : ''}`}
               onClick={() => setActiveTab('tickets')}
+              onMouseEnter={() => {
+                // Prefetch tickets data when hovering (if not already loaded)
+                if (activeTab !== 'tickets' && provider && account) {
+                  window.dispatchEvent(new CustomEvent('lottery-prefetch-tickets'));
+                }
+              }}
             >
               My Tickets
             </button>
-            <button
-              className={`lottery-tab ${activeTab === 'stats' ? 'active' : ''}`}
-              onClick={() => setActiveTab('stats')}
-            >
-              Statistics
-            </button>
+            {/* Statistics tab removed to avoid RPC limit */}
             <button
               className={`lottery-tab ${activeTab === 'results' ? 'active' : ''}`}
               onClick={() => setActiveTab('results')}
+              onMouseEnter={() => {
+                // Prefetch results data when hovering
+                if (activeTab !== 'results' && provider) {
+                  window.dispatchEvent(new CustomEvent('lottery-prefetch-results'));
+                }
+              }}
             >
               Results
             </button>
@@ -399,13 +472,15 @@ export default function Lottery() {
               <BuyTickets
                 onPurchaseSuccess={() => {
                   loadCurrentDraw();
+                  // Trigger event to refresh MyTickets if it's loaded
+                  window.dispatchEvent(new CustomEvent('lottery-ticket-purchased'));
                   setActiveTab('tickets');
                 }}
               />
             )}
-            {activeTab === 'tickets' && <MyTickets />}
-            {activeTab === 'stats' && <LotteryStats />}
-            {activeTab === 'results' && <LotteryResults />}
+            {activeTab === 'tickets' && <MyTickets isActive={activeTab === 'tickets'} />}
+            {/* Statistics removed to avoid RPC limit */}
+            {activeTab === 'results' && <LotteryResults isActive={activeTab === 'results'} />}
           </div>
         </>
       )}

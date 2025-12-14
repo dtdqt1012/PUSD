@@ -5,7 +5,8 @@ import { CONTRACTS } from '../config/contracts';
 import { formatBalance, formatPrice } from '../utils/format';
 import { loadWithTimeout } from '../utils/loadWithTimeout';
 import { useExpandable } from '../hooks/useExpandable';
-import TVLChart from './TVLChart';
+import { lazy, Suspense } from 'react';
+const TVLChart = lazy(() => import('./TVLChart'));
 
 function ProjectInfo() {
   const { provider } = useWeb3();
@@ -35,7 +36,7 @@ function ProjectInfo() {
           new Contract(CONTRACTS.OraclePriceFeed.address, CONTRACTS.OraclePriceFeed.abi, provider),
           new Contract(CONTRACTS.PUSDToken.address, CONTRACTS.PUSDToken.abi, provider),
           new Contract(CONTRACTS.MintingVault.address, CONTRACTS.MintingVault.abi, provider),
-          new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, provider),
+          new Contract(CONTRACTS.LockToEarnPool.address, CONTRACTS.LockToEarnPool.abi, provider),
           new Contract(CONTRACTS.SwapPool.address, CONTRACTS.SwapPool.abi, provider),
         ]);
 
@@ -43,9 +44,9 @@ function ProjectInfo() {
           loadWithTimeout(() => oracleContract.getPOLPrice(), 5000).catch(() => null),
           loadWithTimeout(() => pusdContract.totalSupply(), 5000).catch(() => null),
           loadWithTimeout(() => vaultContract.getBalance(), 5000).catch(() => null),
-          loadWithTimeout(() => stakingContract.totalStaked(), 5000).catch(() => null),
+          loadWithTimeout(() => stakingContract.totalLocked(), 5000).catch(() => null),
           loadWithTimeout(() => swapContract.getBalance(), 5000).catch(() => null),
-          loadWithTimeout(() => stakingContract.totalPUSDStaked(), 5000).catch(() => null),
+          loadWithTimeout(() => stakingContract.totalPUSDLocked(), 5000).catch(() => null),
           // PUSD trong contracts để tính PUSD users đang cầm
           loadWithTimeout(() => pusdContract.balanceOf(CONTRACTS.MintingVault.address), 5000).catch(() => null),
           loadWithTimeout(() => pusdContract.balanceOf(CONTRACTS.SwapPool.address), 5000).catch(() => null),
@@ -62,13 +63,20 @@ function ProjectInfo() {
         setTotalPusd(totalSupply);
         setPusdStaked(pusdStakedValue);
       } catch (error) {
-        console.error('Failed to load stats:', error);
+        // Failed to load stats
       }
     };
 
-    loadStats();
-    const interval = setInterval(loadStats, 60000); // Auto-refresh every 60 seconds (reduced RPC calls)
-    return () => clearInterval(interval);
+    // Delay initial load to avoid blocking page load
+    const timeoutId = setTimeout(() => {
+      loadStats();
+    }, 1000);
+    
+    const interval = setInterval(loadStats, 300000); // Auto-refresh every 5 minutes (reduced RPC calls)
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(interval);
+    };
   }, [provider]);
 
   return (
@@ -98,8 +106,9 @@ function ProjectInfo() {
           </div>
 
           <div className="info-section compact">
-            <h3>TVL Chart</h3>
-            <TVLChart height={250} />
+            <Suspense fallback={<div style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontFamily: 'Courier New, monospace' }}><span style={{ color: '#00ff00' }}>&gt;</span> Loading...</div>}>
+            <TVLChart />
+            </Suspense>
           </div>
 
           <div className="info-section compact">

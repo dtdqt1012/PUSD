@@ -44,30 +44,10 @@ export default function PGOLDMintSection() {
         ]);
 
         const [balance, fee, price, minAmount] = await Promise.allSettled([
-          loadWithTimeout(() => pusdContract.balanceOf(account), 15000).catch((err) => {
-            if (err?.message !== 'Timeout') {
-              console.warn('Failed to load PUSD balance:', err);
-            }
-            return null;
-          }),
-          loadWithTimeout(() => vaultContract.mintFeeBPS(), 15000).catch((err) => {
-            if (err?.message !== 'Timeout') {
-              console.warn('Failed to load mint fee:', err);
-            }
-            return null;
-          }),
-          loadWithTimeout(() => oracleContract.getGoldPrice(), 15000).catch((err) => {
-            if (err?.message !== 'Timeout') {
-              console.warn('Failed to load gold price:', err);
-            }
-            return null;
-          }),
-          loadWithTimeout(() => vaultContract.minMintAmount(), 15000).catch((err) => {
-            if (err?.message !== 'Timeout') {
-              console.warn('Failed to load minimum mint amount:', err);
-            }
-            return null;
-          }),
+          loadWithTimeout(() => pusdContract.balanceOf(account), 15000).catch(() => null),
+          loadWithTimeout(() => vaultContract.mintFeeBPS(), 15000).catch(() => null),
+          loadWithTimeout(() => oracleContract.getGoldPrice(), 15000).catch(() => null),
+          loadWithTimeout(() => vaultContract.minMintAmount(), 15000).catch(() => null),
         ]);
 
         if (mountedRef.current) {
@@ -93,17 +73,16 @@ export default function PGOLDMintSection() {
           );
         }
       } catch (error: any) {
-        console.error('Failed to load data:', error);
-        // Silently handle RPC errors - don't spam console
-        if (error?.code !== -32603 && error?.message !== 'Internal JSON-RPC error.') {
-          console.error('RPC Error details:', error);
-        }
+        // Silently handle RPC errors
       }
     };
 
+    // Add delay before initial load
+    // Load immediately
     loadData();
-    // Increase interval to 60 seconds to reduce RPC calls
-    const interval = setInterval(loadData, 60000);
+    
+    // Increase interval to 10 minutes to reduce RPC calls
+    const interval = setInterval(loadData, 600000);
     return () => clearInterval(interval);
   }, [provider, account]);
 
@@ -137,7 +116,7 @@ export default function PGOLDMintSection() {
           setPgoldReceive(formatBalance(pgoldAmount));
         }
       } catch (error) {
-        console.error('Failed to calculate PGOLD:', error);
+        // Failed to calculate PGOLD
         if (mountedRef.current) {
           setPgoldReceive('');
         }
@@ -223,7 +202,7 @@ export default function PGOLDMintSection() {
       setPusdAmount('');
       setPgoldReceive('');
     } catch (error: any) {
-      console.error('Mint failed:', error);
+      // Mint failed
       showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);

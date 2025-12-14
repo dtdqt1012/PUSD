@@ -83,7 +83,7 @@ export async function calculateTotalPoints(
 
     return formatBalance(totalPoints);
   } catch (error) {
-    console.error('Failed to calculate total points:', error);
+    // Failed to calculate total points
     return '0';
   }
 }
@@ -112,7 +112,7 @@ export async function calculateTotalPointsFromActiveStakes(
 
     return formatBalance(totalPoints);
   } catch (error) {
-    console.error('Failed to calculate total points from active stakes:', error);
+    // Failed to calculate total points from active stakes
     return '0';
   }
 }

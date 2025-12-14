@@ -554,10 +554,12 @@ html {
   min-height: 44px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+  padding-left: 3.5rem;
 }
 
 .btn-primary::before {
-  content: '>';
+  content: '> ';
   position: absolute;
   left: 1rem;
   color: var(--text-green);
@@ -1996,7 +1998,8 @@ p::before {
 
 .terminal-prompt {
   color: var(--text-cyan);
-  margin-right: 0.5rem;
+  margin-right: 0.75rem;
+  margin-left: 0.75rem;
   animation: blink 1s infinite;
 }
 
@@ -3941,7 +3944,7 @@ html {
 }
 
 .winning-number-value {
-  font-size: 1.5rem;
+  font-size: 1rem;
   font-weight: bold;
   color: var(--text-yellow);
   font-family: 'Courier New', monospace;
@@ -4029,6 +4032,10 @@ html {
 .btn-small {
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
+}
+
+.btn-small::before {
+  content: none;
 }
 
 /* Statistics */
@@ -4133,7 +4140,7 @@ html {
 }
 
 .winning-number-value {
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   font-weight: bold;
   color: var(--text-yellow);
   font-family: 'Courier New', monospace;
@@ -4239,6 +4246,112 @@ html {
   border: 1px solid var(--border-gray);
   border-radius: 4px;
   font-family: 'Courier New', monospace;
+}
+
+/* Daily Check-In Styles */
+.checkin-container {
+  padding: 1rem;
+}
+
+.checkin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.checkin-stat-item {
+  background: rgba(0, 255, 0, 0.05);
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  border-radius: 4px;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.checkin-stat-label {
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.checkin-stat-value {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--text-green);
+}
+
+.checkin-stat-value.highlight {
+  color: #ffff00;
+  text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+}
+
+.checkin-pog-badge {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.2));
+  border: 2px solid #ffd700;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  color: #ffd700;
+  font-weight: bold;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.checkin-info {
+  background: rgba(0, 255, 0, 0.03);
+  border: 1px solid rgba(0, 255, 0, 0.1);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.checkin-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(0, 255, 0, 0.1);
+}
+
+.checkin-info-row:last-child {
+  border-bottom: none;
+}
+
+.checkin-label {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.checkin-value {
+  color: var(--text-green);
+  font-weight: bold;
+}
+
+.checkin-note {
+  background: rgba(0, 255, 0, 0.03);
+  border-left: 2px solid var(--text-green);
+  padding: 0.75rem;
+  border-radius: 2px;
+}
+
+.checkin-note p {
+  margin: 0.25rem 0;
+  color: #888;
+}
+
+.btn-primary.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(0, 255, 0, 0);
+  }
 }
 
 /* ============================================

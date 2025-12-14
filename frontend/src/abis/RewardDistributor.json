@@ -1,461 +1,454 @@
 [
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "address",
-                           "name":  "_pusdToken",
-                           "type":  "address"
-                       },
-                       {
-                           "internalType":  "address",
-                           "name":  "_stakingPool",
-                           "type":  "address"
-                       },
-                       {
-                           "internalType":  "address",
-                           "name":  "initialOwner",
-                           "type":  "address"
-                       }
-                   ],
-        "stateMutability":  "nonpayable",
-        "type":  "constructor"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "address",
-                           "name":  "owner",
-                           "type":  "address"
-                       }
-                   ],
-        "name":  "OwnableInvalidOwner",
-        "type":  "error"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "address",
-                           "name":  "account",
-                           "type":  "address"
-                       }
-                   ],
-        "name":  "OwnableUnauthorizedAccount",
-        "type":  "error"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "ReentrancyGuardReentrantCall",
-        "type":  "error"
-    },
-    {
-        "anonymous":  false,
-        "inputs":  [
-                       {
-                           "indexed":  true,
-                           "internalType":  "address",
-                           "name":  "previousOwner",
-                           "type":  "address"
-                       },
-                       {
-                           "indexed":  true,
-                           "internalType":  "address",
-                           "name":  "newOwner",
-                           "type":  "address"
-                       }
-                   ],
-        "name":  "OwnershipTransferred",
-        "type":  "event"
-    },
-    {
-        "anonymous":  false,
-        "inputs":  [
-                       {
-                           "indexed":  true,
-                           "internalType":  "address",
-                           "name":  "project",
-                           "type":  "address"
-                       },
-                       {
-                           "indexed":  false,
-                           "internalType":  "bool",
-                           "name":  "status",
-                           "type":  "bool"
-                       }
-                   ],
-        "name":  "ProjectWhitelisted",
-        "type":  "event"
-    },
-    {
-        "anonymous":  false,
-        "inputs":  [
-                       {
-                           "indexed":  false,
-                           "internalType":  "uint256",
-                           "name":  "oldRate",
-                           "type":  "uint256"
-                       },
-                       {
-                           "indexed":  false,
-                           "internalType":  "uint256",
-                           "name":  "newRate",
-                           "type":  "uint256"
-                       }
-                   ],
-        "name":  "RateUpdated",
-        "type":  "event"
-    },
-    {
-        "anonymous":  false,
-        "inputs":  [
-                       {
-                           "indexed":  true,
-                           "internalType":  "address",
-                           "name":  "depositor",
-                           "type":  "address"
-                       },
-                       {
-                           "indexed":  false,
-                           "internalType":  "uint256",
-                           "name":  "amount",
-                           "type":  "uint256"
-                       },
-                       {
-                           "indexed":  false,
-                           "internalType":  "string",
-                           "name":  "project",
-                           "type":  "string"
-                       }
-                   ],
-        "name":  "RewardDeposited",
-        "type":  "event"
-    },
-    {
-        "anonymous":  false,
-        "inputs":  [
-                       {
-                           "indexed":  true,
-                           "internalType":  "address",
-                           "name":  "user",
-                           "type":  "address"
-                       },
-                       {
-                           "indexed":  false,
-                           "internalType":  "uint256",
-                           "name":  "amount",
-                           "type":  "uint256"
-                       }
-                   ],
-        "name":  "RewardsClaimed",
-        "type":  "event"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "address[]",
-                           "name":  "projects",
-                           "type":  "address[]"
-                       },
-                       {
-                           "internalType":  "bool[]",
-                           "name":  "statuses",
-                           "type":  "bool[]"
-                       }
-                   ],
-        "name":  "batchWhitelistProjects",
-        "outputs":  [
-
-                    ],
-        "stateMutability":  "nonpayable",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "claimRewards",
-        "outputs":  [
-
-                    ],
-        "stateMutability":  "nonpayable",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "address",
-                           "name":  "",
-                           "type":  "address"
-                       }
-                   ],
-        "name":  "claimedRewards",
-        "outputs":  [
-                        {
-                            "internalType":  "uint256",
-                            "name":  "",
-                            "type":  "uint256"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "string",
-                           "name":  "projectName",
-                           "type":  "string"
-                       }
-                   ],
-        "name":  "depositRewards",
-        "outputs":  [
-
-                    ],
-        "stateMutability":  "nonpayable",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "uint256",
-                           "name":  "amount",
-                           "type":  "uint256"
-                       },
-                       {
-                           "internalType":  "string",
-                           "name":  "projectName",
-                           "type":  "string"
-                       }
-                   ],
-        "name":  "depositRewardsAmount",
-        "outputs":  [
-
-                    ],
-        "stateMutability":  "nonpayable",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "uint256",
-                           "name":  "amount",
-                           "type":  "uint256"
-                       }
-                   ],
-        "name":  "emergencyWithdraw",
-        "outputs":  [
-
-                    ],
-        "stateMutability":  "nonpayable",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "address",
-                           "name":  "user",
-                           "type":  "address"
-                       }
-                   ],
-        "name":  "getClaimableRewards",
-        "outputs":  [
-                        {
-                            "internalType":  "uint256",
-                            "name":  "",
-                            "type":  "uint256"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "getPointsToPusdRate",
-        "outputs":  [
-                        {
-                            "internalType":  "uint256",
-                            "name":  "",
-                            "type":  "uint256"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "owner",
-        "outputs":  [
-                        {
-                            "internalType":  "address",
-                            "name":  "",
-                            "type":  "address"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "pointsToPusdRate",
-        "outputs":  [
-                        {
-                            "internalType":  "uint256",
-                            "name":  "",
-                            "type":  "uint256"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "pusdToken",
-        "outputs":  [
-                        {
-                            "internalType":  "contract PUSDToken",
-                            "name":  "",
-                            "type":  "address"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "renounceOwnership",
-        "outputs":  [
-
-                    ],
-        "stateMutability":  "nonpayable",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "uint256",
-                           "name":  "newRate",
-                           "type":  "uint256"
-                       }
-                   ],
-        "name":  "setPointsToPusdRate",
-        "outputs":  [
-
-                    ],
-        "stateMutability":  "nonpayable",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "address",
-                           "name":  "project",
-                           "type":  "address"
-                       },
-                       {
-                           "internalType":  "bool",
-                           "name":  "status",
-                           "type":  "bool"
-                       }
-                   ],
-        "name":  "setWhitelistedProject",
-        "outputs":  [
-
-                    ],
-        "stateMutability":  "nonpayable",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "stakingPool",
-        "outputs":  [
-                        {
-                            "internalType":  "contract StakingPool",
-                            "name":  "",
-                            "type":  "address"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "totalClaimedRewards",
-        "outputs":  [
-                        {
-                            "internalType":  "uint256",
-                            "name":  "",
-                            "type":  "uint256"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-
-                   ],
-        "name":  "totalRewardPool",
-        "outputs":  [
-                        {
-                            "internalType":  "uint256",
-                            "name":  "",
-                            "type":  "uint256"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "address",
-                           "name":  "newOwner",
-                           "type":  "address"
-                       }
-                   ],
-        "name":  "transferOwnership",
-        "outputs":  [
-
-                    ],
-        "stateMutability":  "nonpayable",
-        "type":  "function"
-    },
-    {
-        "inputs":  [
-                       {
-                           "internalType":  "address",
-                           "name":  "",
-                           "type":  "address"
-                       }
-                   ],
-        "name":  "whitelistedProjects",
-        "outputs":  [
-                        {
-                            "internalType":  "bool",
-                            "name":  "",
-                            "type":  "bool"
-                        }
-                    ],
-        "stateMutability":  "view",
-        "type":  "function"
-    },
-    {
-        "stateMutability":  "payable",
-        "type":  "receive"
-    }
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_pusdToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_lockToEarnPool",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_ecosystemTracker",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "initialOwner",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "project",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "status",
+        "type": "bool"
+      }
+    ],
+    "name": "ProjectWhitelisted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldRate",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newRate",
+        "type": "uint256"
+      }
+    ],
+    "name": "RateUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "depositor",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "project",
+        "type": "string"
+      }
+    ],
+    "name": "RewardDeposited",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "RewardsClaimed",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "projects",
+        "type": "address[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "statuses",
+        "type": "bool[]"
+      }
+    ],
+    "name": "batchWhitelistProjects",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "claimRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "claimedRewards",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "projectName",
+        "type": "string"
+      }
+    ],
+    "name": "depositRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "projectName",
+        "type": "string"
+      }
+    ],
+    "name": "depositRewardsAmount",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ecosystemTracker",
+    "outputs": [
+      {
+        "internalType": "contract EcosystemTracker",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "emergencyWithdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getClaimableRewards",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getPointsToPusdRate",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lockToEarnPool",
+    "outputs": [
+      {
+        "internalType": "contract LockToEarnPool",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pointsToPusdRate",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pusdToken",
+    "outputs": [
+      {
+        "internalType": "contract PUSDToken",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_ecosystemTracker",
+        "type": "address"
+      }
+    ],
+    "name": "setEcosystemTracker",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "newRate",
+        "type": "uint256"
+      }
+    ],
+    "name": "setPointsToPusdRate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "project",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "status",
+        "type": "bool"
+      }
+    ],
+    "name": "setWhitelistedProject",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalClaimedRewards",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalRewardPool",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "whitelistedProjects",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
+  }
 ]

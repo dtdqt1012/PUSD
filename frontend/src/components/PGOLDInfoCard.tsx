@@ -38,18 +38,9 @@ export default function PGOLDInfoCard() {
         ]);
 
         const results = await Promise.allSettled([
-          loadWithTimeout(() => oracleContract.getGoldPrice(), 10000).catch((err) => {
-            console.warn('Failed to load gold price:', err);
-            return null;
-          }),
-          loadWithTimeout(() => pgoldTokenContract.totalSupply(), 10000).catch((err) => {
-            console.warn('Failed to load total PGOLD:', err);
-            return null;
-          }),
-          loadWithTimeout(() => pgoldVaultContract.totalPUSDReserve(), 10000).catch((err) => {
-            console.warn('Failed to load PUSD reserve:', err);
-            return null;
-          }),
+          loadWithTimeout(() => oracleContract.getGoldPrice(), 10000).catch(() => null),
+          loadWithTimeout(() => pgoldTokenContract.totalSupply(), 10000).catch(() => null),
+          loadWithTimeout(() => pgoldVaultContract.totalPUSDReserve(), 10000).catch(() => null),
         ]);
 
         if (!mountedRef.current) return;
@@ -83,14 +74,8 @@ export default function PGOLDInfoCard() {
         // Load user balances
         if (account && mountedRef.current) {
           const [userPGOLD, userPUSD] = await Promise.allSettled([
-            loadWithTimeout(() => pgoldTokenContract.balanceOf(account), 10000).catch((err) => {
-              console.warn('Failed to load user PGOLD balance:', err);
-              return null;
-            }),
-            loadWithTimeout(() => pusdContract.balanceOf(account), 10000).catch((err) => {
-              console.warn('Failed to load user PUSD balance:', err);
-              return null;
-            }),
+            loadWithTimeout(() => pgoldTokenContract.balanceOf(account), 10000).catch(() => null),
+            loadWithTimeout(() => pusdContract.balanceOf(account), 10000).catch(() => null),
           ]);
 
           if (mountedRef.current) {
@@ -107,17 +92,16 @@ export default function PGOLDInfoCard() {
           }
         }
       } catch (error: any) {
-        console.error('Failed to load PGOLD data:', error);
-        // Silently handle RPC errors - don't spam console
-        if (error?.code !== -32603 && error?.message !== 'Internal JSON-RPC error.') {
-          console.error('RPC Error details:', error);
-        }
+        // Silently handle RPC errors
       }
     };
 
+    // Add delay before initial load
+    // Load immediately
     loadData();
-    // Increase interval to 60 seconds to reduce RPC calls
-    const interval = setInterval(loadData, 60000);
+    
+    // Increase interval to 10 minutes to reduce RPC calls
+    const interval = setInterval(loadData, 600000);
     return () => clearInterval(interval);
   }, [provider, account]);
 

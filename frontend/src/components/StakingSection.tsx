@@ -7,23 +7,9 @@ import { parseAmount, formatBalance } from '../utils/format';
 import { cache } from '../utils/cache';
 import { executeTransaction, getTransactionErrorMessage } from '../utils/transaction';
 import { loadWithTimeout } from '../utils/loadWithTimeout';
+import { isRateLimitError, isRPCError, rpcBatchHandler } from '../utils/rpcHandler';
 import { useExpandable } from '../hooks/useExpandable';
-
-interface Stake {
-  amount: bigint;
-  lockUntil: bigint;
-  points: bigint;
-  createdAt: bigint;
-  active: boolean;
-}
-
-interface PUSDStake {
-  amount: bigint;
-  lockUntil: bigint;
-  points: bigint;
-  createdAt: bigint;
-  active: boolean;
-}
+import { getUserActiveStakes, getUserActivePUSDStakes, Stake, PUSDStake } from '../utils/stakingHelpers';
 
 export default function StakingSection() {
   const { signer, account, isConnected } = useWeb3();
@@ -57,9 +43,10 @@ export default function StakingSection() {
       return;
     }
 
-    const timeoutId = setTimeout(() => {
-      const loadStakes = async () => {
-        try {
+    // Load immediately with cache
+    const loadStakes = async () => {
+      try {
+          
           const cacheKey = `stakes-${account}`;
           const pusdCacheKey = `pusd-stakes-${account}`;
           const cached = cache.get<Stake[]>(cacheKey);
@@ -70,13 +57,14 @@ export default function StakingSection() {
             setLoadingStakes(false);
           }
 
-          const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+          const stakingContract = new Contract(CONTRACTS.LockToEarnPool.address, CONTRACTS.LockToEarnPool.abi, signer);
           const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, signer);
           
+          // Use shared utilities with rpcBatchHandler
           const [userStakes, userPusdStakes, claimable] = await Promise.allSettled([
-            loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
-            loadWithTimeout(() => stakingContract.getUserActivePUSDStakes(account), 5000).catch(() => []),
-            loadWithTimeout(() => rewardContract.getClaimableRewards(account), 5000).catch(() => 0n),
+            getUserActiveStakes(stakingContract, account).catch(() => []),
+            getUserActivePUSDStakes(stakingContract, account).catch(() => []),
+            rpcBatchHandler.add(() => rewardContract.getClaimableRewards(account)).catch(() => 0n),
           ]);
           
           if (mountedRef.current) {
@@ -96,15 +84,19 @@ export default function StakingSection() {
             }
             setClaimablePolRewards(formatBalance(claimablePol));
             
+            // Cache for 5 minutes to reduce RPC calls
             if (userStakes.status === 'fulfilled') {
-              cache.set(cacheKey, userStakes.value, 120000);
+              cache.set(cacheKey, userStakes.value, 300000);
             }
             if (userPusdStakes.status === 'fulfilled') {
-              cache.set(pusdCacheKey, userPusdStakes.value, 120000);
+              cache.set(pusdCacheKey, userPusdStakes.value, 300000);
             }
           }
-        } catch (error) {
-          console.error('Failed to load stakes:', error);
+        } catch (error: any) {
+          // Don't log rate limit errors
+          if (!isRateLimitError(error) && !isRPCError(error)) {
+            // Failed to load stakes
+          }
           if (mountedRef.current) {
             setStakes([]);
             setPusdStakes([]);
@@ -116,27 +108,28 @@ export default function StakingSection() {
         }
       };
 
-      loadStakes();
-    }, 100); // Reduced initial delay for faster load
+    // Load immediately
+    loadStakes();
 
     const interval = setInterval(() => {
       if (signer && account && mountedRef.current) {
         (async () => {
           try {
-            const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+            const stakingContract = new Contract(CONTRACTS.LockToEarnPool.address, CONTRACTS.LockToEarnPool.abi, signer);
             const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, signer);
             
+            // Use shared utilities with rpcBatchHandler
             const [userStakes, userPusdStakes, claimable] = await Promise.allSettled([
-              loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
-              loadWithTimeout(() => stakingContract.getUserActivePUSDStakes(account), 5000).catch(() => []),
-              loadWithTimeout(() => rewardContract.getClaimableRewards(account), 5000).catch(() => 0n),
+              getUserActiveStakes(stakingContract, account).catch(() => []),
+              getUserActivePUSDStakes(stakingContract, account).catch(() => []),
+              rpcBatchHandler.add(() => rewardContract.getClaimableRewards(account)).catch(() => 0n),
             ]);
             
             if (mountedRef.current) {
               if (userStakes.status === 'fulfilled') {
                 const stakesData = userStakes.value;
                 setStakes(stakesData);
-                cache.set(`stakes-${account}`, stakesData, 30000);
+                cache.set(`stakes-${account}`, stakesData, 300000); // 5 minutes
                 
                 // Calculate claimable POL from unlocked stakes
                 const currentTime = Math.floor(Date.now() / 1000);
@@ -150,21 +143,23 @@ export default function StakingSection() {
               }
               if (userPusdStakes.status === 'fulfilled') {
                 setPusdStakes(userPusdStakes.value);
-                cache.set(`pusd-stakes-${account}`, userPusdStakes.value, 30000);
+                cache.set(`pusd-stakes-${account}`, userPusdStakes.value, 300000); // 5 minutes
               }
               if (claimable.status === 'fulfilled' && claimable.value) {
                 setClaimableRewards(formatBalance(claimable.value));
               }
             }
-          } catch (error) {
-            console.error('Failed to refresh stakes:', error);
+          } catch (error: any) {
+            // Don't log rate limit errors
+            if (!isRateLimitError(error) && !isRPCError(error)) {
+              // Failed to refresh stakes
+            }
           }
         })();
       }
-    }, 60000); // Auto-refresh every 60 seconds (reduced RPC calls)
+    }, 900000); // Auto-refresh every 15 minutes to reduce RPC calls
 
     return () => {
-      clearTimeout(timeoutId);
       clearInterval(interval);
     };
   }, [signer, account]);
@@ -178,12 +173,12 @@ export default function StakingSection() {
 
     setLoading(true);
     try {
-      const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+      const stakingContract = new Contract(CONTRACTS.LockToEarnPool.address, CONTRACTS.LockToEarnPool.abi, signer);
       const polWei = parseAmount(polAmount);
       
       await executeTransaction(
         stakingContract,
-        'stake',
+        'lock',
         [parseInt(lockDays)],
         signer,
         { value: polWei }
@@ -192,12 +187,26 @@ export default function StakingSection() {
       showNotification('Stake successful!', 'success');
       setPolAmount('');
       cache.delete(`stakes-${account}`);
-      const updatedStakes = await stakingContract.getUserActiveStakes(account);
+      // Reload stakes
+      const lockCount = await stakingContract.getUserLockCount(account);
+      const updatedStakes: Stake[] = [];
+      for (let i = 0; i < lockCount; i++) {
+        const lock = await stakingContract.getUserLock(account, i);
+        if (lock.active) {
+          updatedStakes.push({
+            amount: lock.amount,
+            lockUntil: lock.lockUntil,
+            points: lock.points,
+            createdAt: lock.createdAt,
+            active: lock.active,
+          });
+        }
+      }
       if (mountedRef.current) {
         setStakes(updatedStakes);
       }
     } catch (error: any) {
-      console.error('Stake failed:', error);
+      // Stake failed
       showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
@@ -209,23 +218,37 @@ export default function StakingSection() {
 
     setLoading(true);
     try {
-      const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+      const stakingContract = new Contract(CONTRACTS.LockToEarnPool.address, CONTRACTS.LockToEarnPool.abi, signer);
       
       await executeTransaction(
         stakingContract,
-        'unstake',
+        'unlock',
         [stakeId],
         signer
       );
       
       showNotification('Unstake successful!', 'success');
       cache.delete(`stakes-${account}`);
-      const updatedStakes = await stakingContract.getUserActiveStakes(account);
+      // Reload stakes
+      const lockCount = await stakingContract.getUserLockCount(account);
+      const updatedStakes: Stake[] = [];
+      for (let i = 0; i < lockCount; i++) {
+        const lock = await stakingContract.getUserLock(account, i);
+        if (lock.active) {
+          updatedStakes.push({
+            amount: lock.amount,
+            lockUntil: lock.lockUntil,
+            points: lock.points,
+            createdAt: lock.createdAt,
+            active: lock.active,
+          });
+        }
+      }
       if (mountedRef.current) {
         setStakes(updatedStakes);
       }
     } catch (error: any) {
-      console.error('Unstake failed:', error);
+      // Unstake failed
       showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
@@ -237,11 +260,11 @@ export default function StakingSection() {
 
     setLoading(true);
     try {
-      const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+      const stakingContract = new Contract(CONTRACTS.LockToEarnPool.address, CONTRACTS.LockToEarnPool.abi, signer);
       
       await executeTransaction(
         stakingContract,
-        'unstakePUSD',
+        'unlockPUSD',
         [stakeId],
         signer
       );
@@ -253,7 +276,7 @@ export default function StakingSection() {
         setPusdStakes(updatedStakes);
       }
     } catch (error: any) {
-      console.error('Unstake PUSD failed:', error);
+      // Unstake PUSD failed
       showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
@@ -281,7 +304,7 @@ export default function StakingSection() {
       showNotification('Rewards claimed successfully!', 'success');
       setClaimableRewards('0');
     } catch (error: any) {
-      console.error('Claim rewards failed:', error);
+      // Claim rewards failed
       showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
@@ -297,7 +320,7 @@ export default function StakingSection() {
 
     setLoading(true);
     try {
-      const stakingContract = new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, signer);
+      const stakingContract = new Contract(CONTRACTS.LockToEarnPool.address, CONTRACTS.LockToEarnPool.abi, signer);
       const currentTime = Math.floor(Date.now() / 1000);
       
       // Find all unlocked stake IDs
@@ -318,7 +341,7 @@ export default function StakingSection() {
       for (const stakeId of unlockedStakeIds) {
         await executeTransaction(
           stakingContract,
-          'unstake',
+          'unlock',
           [stakeId],
           signer
         );
@@ -328,14 +351,23 @@ export default function StakingSection() {
       setClaimablePolRewards('0');
       
       // Reload stakes
-      const [userStakes] = await Promise.allSettled([
-        loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
-      ]);
-      if (userStakes.status === 'fulfilled') {
-        setStakes(userStakes.value);
+      const lockCount = await stakingContract.getUserLockCount(account);
+      const userStakes: Stake[] = [];
+      for (let i = 0; i < lockCount; i++) {
+        const lock = await stakingContract.getUserLock(account, i);
+        if (lock.active) {
+          userStakes.push({
+            amount: lock.amount,
+            lockUntil: lock.lockUntil,
+            points: lock.points,
+            createdAt: lock.createdAt,
+            active: lock.active,
+          });
+        }
       }
+      setStakes(userStakes);
     } catch (error: any) {
-      console.error('Claim POL failed:', error);
+      // Claim POL failed
       showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);
@@ -345,7 +377,7 @@ export default function StakingSection() {
   return (
     <div className="section staking-section">
       <h2 onClick={toggle} style={headerStyle}>
-        Stake POL {toggleIcon}
+        HOLD POL {toggleIcon}
       </h2>
       {isExpanded && (
         <>
@@ -410,7 +442,7 @@ export default function StakingSection() {
             disabled={loading || !polAmount || parseFloat(polAmount) <= 0}
             className="btn-primary"
           >
-            {loading ? 'Staking...' : 'Stake POL'}
+            {loading ? 'Holding...' : 'HOLD POL'}
           </button>
 
           {(parseFloat(claimableRewards) > 0 || parseFloat(claimablePolRewards) > 0) && (
@@ -468,7 +500,7 @@ export default function StakingSection() {
               onClick={() => setShowStakesList(!showStakesList)} 
               style={{ cursor: 'pointer', userSelect: 'none' }}
             >
-              Your Stakes ({stakes.length + pusdStakes.length}) {showStakesList ? '▼' : '▶'}
+              POL HELD ({stakes.length + pusdStakes.length}) {showStakesList ? '▼' : '▶'}
             </h3>
             {showStakesList && (
               <>

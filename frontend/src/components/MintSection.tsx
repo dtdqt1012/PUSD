@@ -111,7 +111,7 @@ export default function MintSection() {
           }
         }
       } catch (error) {
-        console.error('Failed to calculate PUSD:', error);
+        // Failed to calculate PUSD
       } finally {
         if (mountedRef.current) {
           setCalculating(false);
@@ -146,6 +146,9 @@ export default function MintSection() {
     
     const loadPrice = async () => {
       try {
+        // Add delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         const oracleContract = new Contract(CONTRACTS.OraclePriceFeed.address, CONTRACTS.OraclePriceFeed.abi, provider);
         const price = await oracleContract.getPOLPrice();
         if (!cancelled && price && price > 0n) {
@@ -196,7 +199,7 @@ export default function MintSection() {
       setPolAmount('');
       setPusdReceive('');
     } catch (error: any) {
-      console.error('Mint failed:', error);
+      // Mint failed
       showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);

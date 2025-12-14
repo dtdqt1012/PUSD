@@ -22,17 +22,25 @@ module.exports = {
       url: process.env.MUMBAI_RPC_URL || "https://rpc-mumbai.maticvigil.com",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
+    amoy: {
+      url: process.env.AMOY_RPC_URL || "https://polygon-amoy.drpc.org",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 80002,
+      gasPrice: 30000000000, // 30 gwei (minimum required by Amoy)
+      timeout: 120000,
+    },
     polygon: {
-      // Use Tatum Gateway for higher rate limit (200 RPS vs 3 RPS free)
-      url: process.env.POLYGON_RPC_URL || "https://polygon-mainnet.gateway.tatum.io",
+      // Use official Polygon RPC
+      url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 137,
       timeout: 120000,
     },
   },
   etherscan: {
-    // Use Etherscan API v2
-    apiKey: process.env.POLYGONSCAN_API_KEY || "",
+    // Use Etherscan API v2 (single key for all networks)
+    apiKey: process.env.POLYGONSCAN_API_KEY || "5QD41NNKM7PBJQ6491V63DGPN3EWJBV2G2",
+    
     customChains: [
       {
         network: "polygon",
@@ -40,6 +48,14 @@ module.exports = {
         urls: {
           apiURL: "https://api.polygonscan.com/api",
           browserURL: "https://polygonscan.com"
+        }
+      },
+      {
+        network: "amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com"
         }
       }
     ]

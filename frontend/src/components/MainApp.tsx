@@ -1,16 +1,16 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import WalletConnect from './WalletConnect';
-import BalanceCard from './BalanceCard';
 import FooterInfo from './FooterInfo';
 import LoadingSkeleton from './LoadingSkeleton';
 import '../index.css';
 
+const BalanceCard = lazy(() => import('./BalanceCard'));
 const MintSection = lazy(() => import('./MintSection'));
 const StakingSection = lazy(() => import('./StakingSection'));
 const SwapSection = lazy(() => import('./SwapSection'));
-const Leaderboard = lazy(() => import('./Leaderboard'));
+const DailyCheckIn = lazy(() => import('./DailyCheckIn'));
 const PGOLDInfoCard = lazy(() => import('./PGOLDInfoCard'));
 const PGOLDMintSection = lazy(() => import('./PGOLDMintSection'));
 const PGOLDRedeemSection = lazy(() => import('./PGOLDRedeemSection'));
@@ -19,7 +19,39 @@ const Lazy = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<LoadingSkeleton />}>{children}</Suspense>
 );
 
+// Intersection Observer hook for lazy loading components when visible
+function useIntersectionObserver(ref: React.RefObject<HTMLElement>, options = {}) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1, ...options });
+
+    observer.observe(ref.current);
+
+    return () => observer.disconnect();
+  }, [ref, options]);
+
+  return isVisible;
+}
+
 export default function MainApp() {
+  const balanceCardRef = useRef<HTMLDivElement>(null);
+  const actionsGridRef = useRef<HTMLDivElement>(null);
+  const dailyCheckInRef = useRef<HTMLDivElement>(null);
+  const pgoldSectionRef = useRef<HTMLDivElement>(null);
+
+  const balanceCardVisible = useIntersectionObserver(balanceCardRef);
+  const actionsGridVisible = useIntersectionObserver(actionsGridRef);
+  const dailyCheckInVisible = useIntersectionObserver(dailyCheckInRef);
+  const pgoldSectionVisible = useIntersectionObserver(pgoldSectionRef);
+
   return (
     <NotificationProvider>
       <div className="app">
@@ -56,22 +88,36 @@ export default function MainApp() {
         </header>
         
         <main className="main">
-          <BalanceCard />
+          <div ref={balanceCardRef}>
+            {balanceCardVisible && <Lazy><BalanceCard /></Lazy>}
+          </div>
           
-          <div className="actions-grid">
-            <Lazy><MintSection /></Lazy>
-            <Lazy><StakingSection /></Lazy>
-            <Lazy><SwapSection /></Lazy>
+          {/* Delay loading action sections to prioritize balance card */}
+          <div ref={actionsGridRef} className="actions-grid">
+            {actionsGridVisible && (
+              <>
+                <Lazy><MintSection /></Lazy>
+                <Lazy><StakingSection /></Lazy>
+                <Lazy><SwapSection /></Lazy>
+              </>
+            )}
           </div>
         
-          <Lazy><Leaderboard /></Lazy>
+          {/* Delay loading check-in and PGOLD sections even more */}
+          <div ref={dailyCheckInRef}>
+            {dailyCheckInVisible && <Lazy><DailyCheckIn /></Lazy>}
+          </div>
 
-          <div className="pgold-section">
-            <Lazy><PGOLDInfoCard /></Lazy>
-            <div className="actions-grid">
-              <Lazy><PGOLDMintSection /></Lazy>
-              <Lazy><PGOLDRedeemSection /></Lazy>
-            </div>
+          <div ref={pgoldSectionRef} className="pgold-section">
+            {pgoldSectionVisible && (
+              <>
+                <Lazy><PGOLDInfoCard /></Lazy>
+                <div className="actions-grid">
+                  <Lazy><PGOLDMintSection /></Lazy>
+                  <Lazy><PGOLDRedeemSection /></Lazy>
+                </div>
+              </>
+            )}
           </div>
         
           <FooterInfo />

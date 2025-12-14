@@ -10,10 +10,341 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="PUSD (Polygon USD) - Decentralized, over-collateralized stablecoin native to Polygon blockchain" />
     <meta name="theme-color" content="#8247e5" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.vercel.app; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://polygon-rpc.com https://*.polygon-rpc.com wss://*.polygon-rpc.com https://va.vercel-scripts.com https://*.vercel.app https://api.coingecko.com https://gasstation.polygon.technology https://api.pinata.cloud https://api.web3.storage https://ipfs.io https://gateway.pinata.cloud https://*.ipfs.w3s.link https://*.ipfs.io https://api.imgur.com https://api.imgbb.com https://upload.pinksale.finance https://*.pinksale.finance;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.vercel.app; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' http://localhost:3001 ws://localhost:3001 wss://localhost:3001 https://polygon-rpc.com https://*.polygon-rpc.com wss://*.polygon-rpc.com https://rpc.ankr.com https://*.ankr.com wss://*.ankr.com https://polygon.publicnode.com https://*.publicnode.com wss://*.publicnode.com https://sparkling-alpha-aura.matic.quiknode.pro wss://sparkling-alpha-aura.matic.quiknode.pro https://va.vercel-scripts.com https://*.vercel.app https://api.coingecko.com https://gasstation.polygon.technology https://api.pinata.cloud https://api.web3.storage https://ipfs.io https://gateway.pinata.cloud https://*.ipfs.w3s.link https://*.ipfs.io https://api.imgur.com https://api.imgbb.com https://upload.pinksale.finance https://*.pinksale.finance;" />
     <link rel="preconnect" href="https://polygon-rpc.com" />
     <link rel="dns-prefetch" href="https://polygon-rpc.com" />
     <title>POLYGON USD - Native Polygon Stablecoin</title>
+    <!-- Intercept RPC errors VERY EARLY, before any other scripts -->
+    <script>
+      (function() {
+        'use strict';
+        // Helper function to check if should suppress RPC error
+        function shouldSuppressRPC(arg) {
+          if (!arg) return false;
+          
+          try {
+            // Check if it's an object with RPC error properties
+            if (typeof arg === 'object' && arg !== null) {
+              // Never suppress user denial errors (code 4001)
+              let code = arg.code;
+              if (code === undefined && arg.error) {
+                code = arg.error.code;
+              }
+              if (code === 4001 || code === 'ACTION_REJECTED') {
+                return false;
+              }
+              
+              // Suppress RPC error codes immediately - check both number and string format
+              if (code === -32601 || code === -32603 || code === -32005 || code === 429 ||
+                  code === '-32601' || code === '-32603' || code === '-32005' || code === '429') {
+                return true;
+              }
+              
+              // Check message
+              let message = arg.message;
+              if (!message && arg.error) {
+                message = arg.error.message;
+              }
+              const messageStr = typeof message === 'string' ? message : String(message || '');
+              if (messageStr.includes('RPC Error') || 
+                  messageStr.includes('Internal JSON-RPC') ||
+                  messageStr.includes('MetaMask - RPC Error') ||
+                  messageStr.includes('rate limited') ||
+                  messageStr.includes('Request is being rate limited') ||
+                  messageStr.includes('eth_maxPriorityFeePerGas') ||
+                  messageStr.includes('missing revert data')) {
+                return true;
+              }
+              
+              // Check stack trace - if it's from inpage.js/common-*.js, it's likely an RPC error
+              let stack = arg.stack;
+              if (!stack && arg.error) {
+                stack = arg.error.stack;
+              }
+              const stackStr = typeof stack === 'string' ? stack : String(stack || '');
+              if (stackStr.includes('inpage.js') || stackStr.includes('common-2.js') || stackStr.includes('common-3.js')) {
+                // If from MetaMask scripts, check if it has RPC error indicators
+                // If code is an RPC error code OR message contains RPC error, suppress
+                if (code === -32601 || code === -32603 || code === -32005 || code === 429 ||
+                    code === '-32601' || code === '-32603' || code === '-32005' || code === '429' ||
+                    messageStr.includes('RPC Error') || 
+                    messageStr.includes('Internal JSON-RPC') ||
+                    messageStr.includes('MetaMask - RPC Error')) {
+                  return true;
+                }
+              }
+              
+              // Try stringifying to check - check multiple formats
+              try {
+                const str = JSON.stringify(arg);
+                // Check for various JSON formats of error codes (with and without spaces)
+                if (str.includes('"code":-32603') || str.includes('"code":-32601') || str.includes('"code":-32005') ||
+                    str.includes('"code": -32603') || str.includes('"code": -32601') || str.includes('"code": -32005') ||
+                    str.includes('code:-32603') || str.includes('code:-32601') || str.includes('code:-32005') ||
+                    str.includes('RPC Error') || str.includes('Internal JSON-RPC') ||
+                    str.includes('MetaMask - RPC Error') ||
+                    str.includes('Request is being rate limited') ||
+                    str.includes('rate limited') ||
+                    str.includes('rate limiting')) {
+                  return true;
+                }
+              } catch (e) {
+                // Ignore
+              }
+              
+              // Also try toString() method
+              try {
+                const str = String(arg);
+                if (str.includes('MetaMask - RPC Error') ||
+                    str.includes('Internal JSON-RPC') ||
+                    str.includes('Request is being rate limited') ||
+                    str.includes('rate limited') ||
+                    str.includes('rate limiting') ||
+                    str.includes('code: -32603') ||
+                    str.includes('code: -32601') ||
+                    str.includes('code: -32005') ||
+                    str.includes('code:-32603') ||
+                    str.includes('code:-32601') ||
+                    str.includes('code:-32005')) {
+                  return true;
+                }
+              } catch (e) {
+                // Ignore
+              }
+            }
+            
+            // Check string arguments - be more thorough
+            if (typeof arg === 'string') {
+              if (arg.includes('MetaMask - RPC Error') ||
+                  arg.includes('Internal JSON-RPC') ||
+                  arg.includes('RPC Error') ||
+                  arg.includes('Request is being rate limited') ||
+                  arg.includes('rate limited') ||
+                  arg.includes('rate limiting') ||
+                  arg.includes('code: -32603') ||
+                  arg.includes('code: -32601') ||
+                  arg.includes('code: -32005') ||
+                  arg.includes('"code":-32603') ||
+                  arg.includes('"code":-32601') ||
+                  arg.includes('"code":-32005') ||
+                  (arg.includes('code') && (arg.includes('-32603') || arg.includes('-32601') || arg.includes('-32005')))) {
+                return true;
+              }
+            }
+          } catch (e) {
+            // Fail open - don't suppress if we can't check
+            return false;
+          }
+          
+          return false;
+        }
+        
+        // Store original console methods
+        const originalWarn = console.warn.bind(console);
+        const originalError = console.error.bind(console);
+        const originalLog = console.log.bind(console);
+        
+        let warnOverriding = false;
+        let errorOverriding = false;
+        let logOverriding = false;
+        
+        // Helper to check if should suppress - check more thoroughly
+        function checkAndSuppress(args, original) {
+          try {
+            for (let i = 0; i < args.length; i++) {
+              const arg = args[i];
+              
+              // Check using shouldSuppressRPC function
+              if (shouldSuppressRPC(arg)) {
+                return true; // Suppress
+              }
+              
+              // Also check if argument is a string that contains RPC error info
+              if (typeof arg === 'string') {
+                if (arg.includes('MetaMask - RPC Error') ||
+                    arg.includes('Internal JSON-RPC') ||
+                    arg.includes('Request is being rate limited') ||
+                    arg.includes('rate limited') ||
+                    arg.includes('rate limiting') ||
+                    arg.includes('code: -32603') ||
+                    arg.includes('code: -32601') ||
+                    arg.includes('code: -32005') ||
+                    arg.includes('"code":-32603') ||
+                    arg.includes('"code":-32601') ||
+                    arg.includes('"code":-32005') ||
+                    arg.includes('"code": -32603') ||
+                    arg.includes('"code": -32601') ||
+                    arg.includes('"code": -32005')) {
+                  return true; // Suppress
+                }
+              }
+              
+              // Check if it's an object with RPC error code directly
+              if (typeof arg === 'object' && arg !== null) {
+                // Check code property directly
+                if (arg.code === -32603 || arg.code === -32601 || arg.code === -32005 || arg.code === 429) {
+                  // But don't suppress user denial
+                  if (arg.code !== 4001) {
+                    return true; // Suppress
+                  }
+                }
+                
+                // Check error.code if exists
+                if (arg.error && typeof arg.error === 'object') {
+                  if (arg.error.code === -32603 || arg.error.code === -32601 || arg.error.code === -32005 || arg.error.code === 429) {
+                    if (arg.error.code !== 4001) {
+                      return true; // Suppress
+                    }
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // If error, don't suppress
+          }
+          return false;
+        }
+        
+        // Override console.warn using defineProperty to make it harder to override
+        try {
+          Object.defineProperty(console, 'warn', {
+            value: function(...args) {
+              if (warnOverriding) {
+                return originalWarn.apply(console, args);
+              }
+              try {
+                warnOverriding = true;
+                if (!checkAndSuppress(args, originalWarn)) {
+                  originalWarn.apply(console, args);
+                }
+              } catch (e) {
+                originalWarn.apply(console, args);
+              } finally {
+                warnOverriding = false;
+              }
+            },
+            writable: false,
+            configurable: false
+          });
+        } catch (e) {
+          // Fallback to normal assignment if defineProperty fails
+          console.warn = function(...args) {
+            if (warnOverriding) {
+              return originalWarn.apply(console, args);
+            }
+            try {
+              warnOverriding = true;
+              if (!checkAndSuppress(args, originalWarn)) {
+                originalWarn.apply(console, args);
+              }
+            } catch (e) {
+              originalWarn.apply(console, args);
+            } finally {
+              warnOverriding = false;
+            }
+          };
+        }
+        
+        // Override console.error
+        try {
+          Object.defineProperty(console, 'error', {
+            value: function(...args) {
+              if (errorOverriding) {
+                return originalError.apply(console, args);
+              }
+              try {
+                errorOverriding = true;
+                if (!checkAndSuppress(args, originalError)) {
+                  originalError.apply(console, args);
+                }
+              } catch (e) {
+                originalError.apply(console, args);
+              } finally {
+                errorOverriding = false;
+              }
+            },
+            writable: false,
+            configurable: false
+          });
+        } catch (e) {
+          // Fallback
+          console.error = function(...args) {
+            if (errorOverriding) {
+              return originalError.apply(console, args);
+            }
+            try {
+              errorOverriding = true;
+              if (!checkAndSuppress(args, originalError)) {
+                originalError.apply(console, args);
+              }
+            } catch (e) {
+              originalError.apply(console, args);
+            } finally {
+              errorOverriding = false;
+            }
+          };
+        }
+        
+        // Also intercept window.onerror to catch errors before they reach console
+        const originalOnError = window.onerror;
+        window.onerror = function(message, source, lineno, colno, error) {
+          // Check if it's an RPC error
+          if (error && shouldSuppressRPC(error)) {
+            return true; // Suppress the error
+          }
+          if (typeof message === 'string' && (
+            message.includes('MetaMask - RPC Error') ||
+            message.includes('Internal JSON-RPC') ||
+            message.includes('eth_maxPriorityFeePerGas')
+          )) {
+            return true; // Suppress
+          }
+          // Call original handler if exists
+          if (originalOnError) {
+            return originalOnError.call(window, message, source, lineno, colno, error);
+          }
+          return false;
+        };
+        
+        // Intercept unhandled promise rejections
+        const originalOnUnhandledRejection = window.onunhandledrejection;
+        window.onunhandledrejection = function(event) {
+          const reason = event.reason;
+          
+          // Never suppress user denial errors (code 4001)
+          if (reason && typeof reason === 'object' && reason !== null && reason.code === 4001) {
+            if (originalOnUnhandledRejection) {
+              return originalOnUnhandledRejection.call(window, event);
+            }
+            return;
+          }
+          
+          // Suppress RPC errors
+          if (reason && shouldSuppressRPC(reason)) {
+            event.preventDefault(); // Suppress the error
+            return;
+          }
+          
+          // Check message string
+          if (reason && typeof reason === 'object' && reason !== null) {
+            const message = reason.message || '';
+            if (typeof message === 'string' && (
+              message.includes('MetaMask - RPC Error') ||
+              message.includes('Internal JSON-RPC') ||
+              message.includes('eth_maxPriorityFeePerGas')
+            )) {
+              event.preventDefault();
+              return;
+            }
+          }
+          
+          // Call original handler if exists
+          if (originalOnUnhandledRejection) {
+            return originalOnUnhandledRejection.call(window, event);
+          }
+        };
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -7,7 +7,10 @@ import { formatBalance, formatPrice } from '../utils/format';
 import { cache } from '../utils/cache';
 import TerminalNumber from './TerminalNumber';
 import { loadWithTimeout } from '../utils/loadWithTimeout';
-import TVLChart from './TVLChart';
+import { isRateLimitError, isRPCError, rpcBatchHandler } from '../utils/rpcHandler';
+import { getUserActiveStakes, Stake } from '../utils/stakingHelpers';
+import { lazy, Suspense } from 'react';
+const TVLChart = lazy(() => import('./TVLChart'));
 
 export default function BalanceCard() {
   const { provider, account, signer } = useWeb3();
@@ -47,10 +50,13 @@ export default function BalanceCard() {
       return;
     }
 
-    const timeoutId = setTimeout(() => {
-      const loadData = async () => {
-        if (loadingRef.current || !mountedRef.current) return;
-        loadingRef.current = true;
+    // Load with minimal delay to avoid blocking initial page load
+    const loadData = async () => {
+      if (loadingRef.current || !mountedRef.current) return;
+      loadingRef.current = true;
+      
+      // Very minimal delay - load almost immediately
+      await new Promise(resolve => setTimeout(resolve, 100));
         
         try {
           const cacheKey = 'balance-data';
@@ -78,7 +84,7 @@ export default function BalanceCard() {
             new Contract(CONTRACTS.OraclePriceFeed.address, CONTRACTS.OraclePriceFeed.abi, provider),
             new Contract(CONTRACTS.PUSDToken.address, CONTRACTS.PUSDToken.abi, provider),
             new Contract(vaultAddress, vaultABI, provider),
-            new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, provider),
+            new Contract(CONTRACTS.LockToEarnPool.address, CONTRACTS.LockToEarnPool.abi, provider),
             new Contract(swapAddress, swapABI, provider),
           ]);
 
@@ -86,10 +92,10 @@ export default function BalanceCard() {
               loadWithTimeout(() => oracleContract.getPOLPrice(), 5000).catch(() => null),
               loadWithTimeout(() => pusdContract.totalSupply(), 5000).catch(() => null),
               loadWithTimeout(() => vaultContract.getBalance(), 5000).catch(() => null),
-              loadWithTimeout(() => stakingContract.totalStaked(), 5000).catch(() => null),
-              loadWithTimeout(() => stakingContract.totalStakes(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalLocked(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalLocks(), 5000).catch(() => null),
               loadWithTimeout(() => swapContract.getBalance(), 5000).catch(() => null),
-              loadWithTimeout(() => stakingContract.totalPUSDStaked(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalPUSDLocked(), 5000).catch(() => null),
             ]);
 
           if (!mountedRef.current) return;
@@ -111,11 +117,12 @@ export default function BalanceCard() {
           setSwapPoolReserves(swapReserves);
           setPusdStaked(pusdStakedValue);
           
-          // Cache price display for MintSection
+          // Cache price display for MintSection (10 minutes)
           if (price && price !== '0') {
-            cache.set('pol-price-display', price, 120000);
+            cache.set('pol-price-display', price, 600000);
           }
 
+            // Cache for 15 minutes to reduce RPC calls
             cache.set(cacheKey, { 
               polPrice: price, 
               totalPusd: totalSupply, 
@@ -124,20 +131,21 @@ export default function BalanceCard() {
               totalStakes: stakesCount,
               swapPoolReserves: swapReserves,
               pusdStaked: pusdStakedValue,
-            }, 120000);
+            }, 900000);
           }
 
           if (account && mountedRef.current) {
             const vaultContract = new Contract(CONTRACTS.MintingVault.address, CONTRACTS.MintingVault.abi, provider);
             const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, provider);
             
+            // Use rpcBatchHandler for all user-specific RPC calls
             const [polBal, pusdBal, userColl, points, claimable, userStakes] = await Promise.allSettled([
-              loadWithTimeout(() => provider.getBalance(account), 5000).catch(() => null),
-              loadWithTimeout(() => pusdContract.balanceOf(account), 5000).catch(() => null),
-              loadWithTimeout(() => vaultContract.userCollateral(account), 5000).catch(() => null),
-              loadWithTimeout(() => stakingContract.getUserTotalPoints(account), 5000).catch(() => null),
-              loadWithTimeout(() => rewardContract.getClaimableRewards(account), 5000).catch(() => null),
-              loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+              rpcBatchHandler.add(() => provider.getBalance(account)).catch(() => null),
+              rpcBatchHandler.add(() => pusdContract.balanceOf(account)).catch(() => null),
+              rpcBatchHandler.add(() => vaultContract.userCollateral(account)).catch(() => null),
+              rpcBatchHandler.add(() => stakingContract.getUserTotalPoints(account)).catch(() => null),
+              rpcBatchHandler.add(() => rewardContract.getClaimableRewards(account)).catch(() => null),
+              getUserActiveStakes(stakingContract, account).catch(() => []),
             ]);
             
             const totalColl = userColl.status === 'fulfilled' && userColl.value ? userColl.value : 0n;
@@ -163,7 +171,7 @@ export default function BalanceCard() {
             }
           }
         } catch (error) {
-          console.error('Failed to load balance data:', error);
+          // Error loading balance data
         } finally {
           if (mountedRef.current) {
             setLoading(false);
@@ -172,8 +180,8 @@ export default function BalanceCard() {
         }
       };
 
-      loadData();
-    }, 100); // Reduced initial delay for faster load
+    // Load immediately
+    loadData();
 
     const interval = setInterval(() => {
       if (!loadingRef.current && mountedRef.current && provider) {
@@ -193,7 +201,7 @@ export default function BalanceCard() {
               new Contract(CONTRACTS.OraclePriceFeed.address, CONTRACTS.OraclePriceFeed.abi, provider),
               new Contract(CONTRACTS.PUSDToken.address, CONTRACTS.PUSDToken.abi, provider),
               new Contract(vaultAddress, vaultABI, provider),
-              new Contract(CONTRACTS.StakingPool.address, CONTRACTS.StakingPool.abi, provider),
+              new Contract(CONTRACTS.LockToEarnPool.address, CONTRACTS.LockToEarnPool.abi, provider),
               new Contract(swapAddress, swapABI, provider),
             ]);
 
@@ -201,10 +209,10 @@ export default function BalanceCard() {
               loadWithTimeout(() => oracleContract.getPOLPrice(), 5000).catch(() => null),
               loadWithTimeout(() => pusdContract.totalSupply(), 5000).catch(() => null),
               loadWithTimeout(() => vaultContract.getBalance(), 5000).catch(() => null),
-              loadWithTimeout(() => stakingContract.totalStaked(), 5000).catch(() => null),
-              loadWithTimeout(() => stakingContract.totalStakes(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalLocked(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalLocks(), 5000).catch(() => null),
               loadWithTimeout(() => swapContract.getBalance(), 5000).catch(() => null),
-              loadWithTimeout(() => stakingContract.totalPUSDStaked(), 5000).catch(() => null),
+              loadWithTimeout(() => stakingContract.totalPUSDLocked(), 5000).catch(() => null),
             ]);
 
             if (!mountedRef.current) return;
@@ -227,7 +235,7 @@ export default function BalanceCard() {
               if (pusdStakedValue) setPusdStaked(pusdStakedValue);
 
               if (price && price !== '0') {
-                cache.set('pol-price-display', price, 30000);
+                cache.set('pol-price-display', price, 300000); // 5 minutes
               }
 
               const cacheKey = 'balance-data';
@@ -239,20 +247,21 @@ export default function BalanceCard() {
                 totalStakes: stakesCount || cache.get<any>(cacheKey)?.totalStakes,
                 swapPoolReserves: swapReserves || cache.get<any>(cacheKey)?.swapPoolReserves,
                 pusdStaked: pusdStakedValue || cache.get<any>(cacheKey)?.pusdStaked,
-              }, 30000);
+              }, 300000); // 5 minutes
 
               // Refresh user data if account connected
               if (account && mountedRef.current) {
                 const vaultContract = new Contract(CONTRACTS.MintingVault.address, CONTRACTS.MintingVault.abi, provider);
                 const rewardContract = new Contract(CONTRACTS.RewardDistributor.address, CONTRACTS.RewardDistributor.abi, provider);
                 
+                // Use rpcBatchHandler for all user-specific RPC calls
                 const [polBal, pusdBal, userColl, points, claimable, userStakes] = await Promise.allSettled([
-                  loadWithTimeout(() => provider.getBalance(account), 5000).catch(() => null),
-                  loadWithTimeout(() => pusdContract.balanceOf(account), 5000).catch(() => null),
-                  loadWithTimeout(() => vaultContract.userCollateral(account), 5000).catch(() => null),
-                  loadWithTimeout(() => stakingContract.getUserTotalPoints(account), 5000).catch(() => null),
-                  loadWithTimeout(() => rewardContract.getClaimableRewards(account), 5000).catch(() => null),
-                  loadWithTimeout(() => stakingContract.getUserActiveStakes(account), 5000).catch(() => []),
+                  rpcBatchHandler.add(() => provider.getBalance(account)).catch(() => null),
+                  rpcBatchHandler.add(() => pusdContract.balanceOf(account)).catch(() => null),
+                  rpcBatchHandler.add(() => vaultContract.userCollateral(account)).catch(() => null),
+                  rpcBatchHandler.add(() => stakingContract.getUserTotalPoints(account)).catch(() => null),
+                  rpcBatchHandler.add(() => rewardContract.getClaimableRewards(account)).catch(() => null),
+                  getUserActiveStakes(stakingContract, account).catch(() => []),
                 ]);
                 
                 const totalColl = userColl.status === 'fulfilled' && userColl.value ? userColl.value : 0n;
@@ -278,17 +287,16 @@ export default function BalanceCard() {
                 }
               }
             }
-          } catch (error) {
-            console.error('Failed to refresh:', error);
+          } catch (error: any) {
+            // Suppress rate limit and RPC errors
           } finally {
             loadingRef.current = false;
           }
         })();
       }
-    }, 60000); // Auto-refresh every 60 seconds (reduced RPC calls)
+    }, 900000); // Auto-refresh every 15 minutes to reduce RPC calls
 
     return () => {
-      clearTimeout(timeoutId);
       clearInterval(interval);
       loadingRef.current = false;
     };
@@ -309,7 +317,6 @@ export default function BalanceCard() {
       // Refresh claimable rewards
       setClaimableRewards('0');
     } catch (error: any) {
-      console.error('Claim rewards failed:', error);
       showNotification(error?.reason || 'Failed to claim rewards', 'error');
     }
   };
@@ -444,10 +451,11 @@ export default function BalanceCard() {
         </div>
       </div>
 
-      {/* TVL Chart */}
+      {/* TVL Chart - Lazy loaded to reduce initial RPC calls */}
       <div className="info-section">
-        <h3>TVL Chart</h3>
-        <TVLChart height={300} />
+        <Suspense fallback={<div style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontFamily: 'Courier New, monospace' }}><span style={{ color: '#00ff00' }}>&gt;</span> Loading...</div>}>
+          <TVLChart />
+        </Suspense>
       </div>
 
       {/* Key Metrics */}

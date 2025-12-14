@@ -8,12 +8,17 @@
       },
       {
         "internalType": "address",
-        "name": "_stakingPool",
+        "name": "_lockToEarnPool",
         "type": "address"
       },
       {
         "internalType": "address",
         "name": "_oracle",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_ecosystemTracker",
         "type": "address"
       },
       {
@@ -95,7 +100,13 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "polStaked",
+        "name": "polLocked",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "pusdLocked",
         "type": "uint256"
       },
       {
@@ -167,7 +178,33 @@
   },
   {
     "inputs": [],
-    "name": "MINT_SPLIT_BPS",
+    "name": "POL_LOCK_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PUSD_LOCK_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PUSD_MINT_BPS",
     "outputs": [
       {
         "internalType": "uint256",
@@ -186,6 +223,19 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ecosystemTracker",
+    "outputs": [
+      {
+        "internalType": "contract EcosystemTracker",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -237,6 +287,19 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lockToEarnPool",
+    "outputs": [
+      {
+        "internalType": "contract LockToEarnPool",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -307,6 +370,11 @@
         "internalType": "uint256",
         "name": "pusdAmount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minPolOut",
+        "type": "uint256"
       }
     ],
     "name": "redeemPUSD",
@@ -338,6 +406,19 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "_lockToEarnPool",
+        "type": "address"
+      }
+    ],
+    "name": "setLockToEarnPool",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "_oracle",
         "type": "address"
       }
@@ -358,32 +439,6 @@
     "name": "setPUSDToken",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_stakingPool",
-        "type": "address"
-      }
-    ],
-    "name": "setStakingPool",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "stakingPool",
-    "outputs": [
-      {
-        "internalType": "contract StakingPool",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {

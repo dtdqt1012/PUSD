@@ -5,10 +5,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./PUSD.sol";
 import "./OraclePriceFeed.sol";
+import "./EcosystemTracker.sol";
 
 contract SwapPool is Ownable, ReentrancyGuard {
     PUSDToken public pusdToken;
     OraclePriceFeed public oracle;
+    EcosystemTracker public ecosystemTracker;
     
     // Total POL reserves in pool
     uint256 public totalPOLReserves;
@@ -42,6 +44,7 @@ contract SwapPool is Ownable, ReentrancyGuard {
         address _pusdToken,
         address _oracle,
         address _feeRecipient,
+        address _ecosystemTracker,
         address initialOwner
     ) Ownable(initialOwner) {
         require(_pusdToken != address(0), "SwapPool: Invalid PUSD token");
@@ -50,6 +53,9 @@ contract SwapPool is Ownable, ReentrancyGuard {
         pusdToken = PUSDToken(_pusdToken);
         oracle = OraclePriceFeed(_oracle);
         feeRecipient = _feeRecipient;
+        if (_ecosystemTracker != address(0)) {
+            ecosystemTracker = EcosystemTracker(_ecosystemTracker);
+        }
     }
 
     receive() external payable {
@@ -117,6 +123,15 @@ contract SwapPool is Ownable, ReentrancyGuard {
         require(success, "SwapPool: Transfer failed");
         
         emit SwappedPUSDtoPOL(msg.sender, pusdAmount, polToUser, fee);
+        
+        // Track transaction
+        if (address(ecosystemTracker) != address(0)) {
+            ecosystemTracker.recordTransaction(
+                msg.sender,
+                EcosystemTracker.TransactionType.Swap,
+                pusdAmount
+            );
+        }
     }
 
     function getPOLtoPUSDQuote(uint256 polAmount) external view returns (uint256 pusdAmount, uint256 fee) {
@@ -154,6 +169,10 @@ contract SwapPool is Ownable, ReentrancyGuard {
     function setOracle(address _oracle) external onlyOwner {
         require(_oracle != address(0), "SwapPool: Invalid address");
         oracle = OraclePriceFeed(_oracle);
+    }
+    
+    function setEcosystemTracker(address _ecosystemTracker) external onlyOwner {
+        ecosystemTracker = EcosystemTracker(_ecosystemTracker);
     }
 
     function getBalance() external view returns (uint256) {

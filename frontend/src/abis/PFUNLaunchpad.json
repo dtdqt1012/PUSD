@@ -18,6 +18,11 @@
       },
       {
         "internalType": "address",
+        "name": "_developmentFund",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
         "name": "initialOwner",
         "type": "address"
       }
@@ -108,7 +113,7 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "pusdBurned",
+        "name": "pusdSent",
         "type": "uint256"
       },
       {
@@ -152,24 +157,6 @@
         "indexed": false,
         "internalType": "string",
         "name": "logoUrl",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "website",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "telegram",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "discord",
         "type": "string"
       }
     ],
@@ -280,6 +267,19 @@
   },
   {
     "inputs": [],
+    "name": "developmentFund",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "getAllLaunches",
     "outputs": [
       {
@@ -370,21 +370,6 @@
             "internalType": "string",
             "name": "logoUrl",
             "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "website",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "telegram",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "discord",
-            "type": "string"
           }
         ],
         "internalType": "struct PFUNLaunchpad.Launch",
@@ -420,21 +405,6 @@
       {
         "internalType": "string",
         "name": "logoUrl",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "website",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "telegram",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "discord",
         "type": "string"
       }
     ],
@@ -513,21 +483,6 @@
         "internalType": "string",
         "name": "logoUrl",
         "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "website",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "telegram",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "discord",
-        "type": "string"
       }
     ],
     "stateMutability": "view",
@@ -601,6 +556,19 @@
       }
     ],
     "name": "setCollateralPercentage",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_developmentFund",
+        "type": "address"
+      }
+    ],
+    "name": "setDevelopmentFund",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

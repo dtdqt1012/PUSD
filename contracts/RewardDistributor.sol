@@ -5,11 +5,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./PUSD.sol";
-import "./StakingPool.sol";
+import "./LockToEarnPool.sol";
+import "./EcosystemTracker.sol";
 
 contract RewardDistributor is Ownable, ReentrancyGuard {
     PUSDToken public pusdToken;
-    StakingPool public stakingPool;
+    LockToEarnPool public lockToEarnPool;
+    EcosystemTracker public ecosystemTracker;
     
     // Conversion rate: 1 point = X PUSD (with 18 decimals)
     // Default = 0 (not set, admin must set after deployment)
@@ -34,14 +36,18 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
 
     constructor(
         address _pusdToken,
-        address _stakingPool,
+        address _lockToEarnPool,
+        address _ecosystemTracker,
         address initialOwner
     ) Ownable(initialOwner) {
         require(_pusdToken != address(0), "RewardDistributor: Invalid PUSD token");
-        require(_stakingPool != address(0), "RewardDistributor: Invalid staking pool");
+        require(_lockToEarnPool != address(0), "RewardDistributor: Invalid lock to earn pool");
         require(initialOwner != address(0), "RewardDistributor: Invalid owner");
         pusdToken = PUSDToken(_pusdToken);
-        stakingPool = StakingPool(payable(_stakingPool));
+        lockToEarnPool = LockToEarnPool(payable(_lockToEarnPool));
+        if (_ecosystemTracker != address(0)) {
+            ecosystemTracker = EcosystemTracker(_ecosystemTracker);
+        }
     }
 
     function depositRewards(string memory projectName) external nonReentrant {
@@ -79,7 +85,7 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
     function claimRewards() external nonReentrant {
         require(pointsToPusdRate > 0, "RewardDistributor: Rate not set by admin");
         
-        uint256 userPoints = stakingPool.getUserTotalPoints(msg.sender);
+        uint256 userPoints = lockToEarnPool.getUserTotalPoints(msg.sender);
         require(userPoints > 0, "RewardDistributor: No points to claim");
         
         // Calculate total rewards based on current rate on contract
@@ -104,13 +110,22 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
         pusdToken.transfer(msg.sender, claimable);
         
         emit RewardsClaimed(msg.sender, claimable);
+        
+        // Track transaction
+        if (address(ecosystemTracker) != address(0)) {
+            ecosystemTracker.recordTransaction(
+                msg.sender,
+                EcosystemTracker.TransactionType.ClaimReward,
+                claimable
+            );
+        }
     }
 
     function getClaimableRewards(address user) external view returns (uint256) {
         // If rate not set, return 0
         if (pointsToPusdRate == 0) return 0;
         
-        uint256 userPoints = stakingPool.getUserTotalPoints(user);
+        uint256 userPoints = lockToEarnPool.getUserTotalPoints(user);
         if (userPoints == 0) return 0;
         
         uint256 totalRewards = (userPoints * pointsToPusdRate) / 1e18;
@@ -152,6 +167,10 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
         
         totalRewardPool -= amount;
         pusdToken.transfer(owner(), amount);
+    }
+
+    function setEcosystemTracker(address _ecosystemTracker) external onlyOwner {
+        ecosystemTracker = EcosystemTracker(_ecosystemTracker);
     }
 
     receive() external payable {

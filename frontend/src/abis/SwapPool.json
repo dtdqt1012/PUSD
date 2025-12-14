@@ -18,6 +18,11 @@
       },
       {
         "internalType": "address",
+        "name": "_ecosystemTracker",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
         "name": "initialOwner",
         "type": "address"
       }
@@ -88,6 +93,25 @@
       }
     ],
     "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "depositor",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "POLDeposited",
     "type": "event"
   },
   {
@@ -179,6 +203,26 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "depositPOL",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ecosystemTracker",
+    "outputs": [
+      {
+        "internalType": "contract EcosystemTracker",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -300,6 +344,19 @@
   {
     "inputs": [],
     "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_ecosystemTracker",
+        "type": "address"
+      }
+    ],
+    "name": "setEcosystemTracker",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

@@ -6,6 +6,7 @@ import { CONTRACTS } from '../config/contracts';
 import { parseAmount, formatBalance } from '../utils/format';
 import { executeTransaction, getTransactionErrorMessage } from '../utils/transaction';
 import { useExpandable } from '../hooks/useExpandable';
+import { isRateLimitError, isRPCError } from '../utils/rpcHandler';
 
 export default function SwapSection() {
   const { signer, account, isConnected, provider } = useWeb3();
@@ -31,13 +32,15 @@ export default function SwapSection() {
         const reserves = await swapContract.getBalance();
         setPoolReserves(formatBalance(reserves));
       } catch (error) {
-        console.error('Failed to load reserves:', error);
+        // Failed to load reserves
       }
     };
 
+    // Load immediately
     loadReserves();
-    // Increase interval to 60 seconds to reduce RPC calls
-    const interval = setInterval(loadReserves, 60000);
+    
+    // Increase interval to 10 minutes to reduce RPC calls
+    const interval = setInterval(loadReserves, 600000);
     return () => clearInterval(interval);
   }, [provider]);
 
@@ -67,14 +70,16 @@ export default function SwapSection() {
           setQuote(formatBalance(polAmount));
           setFee(formatBalance(swapFee));
         }
-      } catch (error) {
-        console.error('Failed to calculate quote:', error);
-        setQuote('0');
-        setFee('0');
-      }
+        } catch (error) {
+          // Silently handle RPC errors
+          setQuote('0');
+          setFee('0');
+        }
     };
 
-    calculateQuote();
+    // Debounce quote calculation to avoid too many RPC calls while typing
+    const timeoutId = setTimeout(calculateQuote, 1500);
+    return () => clearTimeout(timeoutId);
   }, [amount, swapType, provider]);
 
   const handleSwap = async () => {
@@ -94,7 +99,7 @@ export default function SwapSection() {
         const oracleContract = new Contract(oracleAddress, oracleABI, signer);
         await oracleContract.getPOLPrice();
       } catch (oracleError: any) {
-        console.error('Oracle check failed:', oracleError);
+        // Oracle check failed
         showNotification('Oracle price feed not configured. Please configure the oracle first.', 'error');
         setLoading(false);
         return;
@@ -108,7 +113,7 @@ export default function SwapSection() {
         try {
           [quotePusd] = await swapContract.getPOLtoPUSDQuote(polWei);
         } catch (quoteError: any) {
-          console.error('Failed to get quote:', quoteError);
+          // Failed to get quote
           showNotification('Failed to get price quote. Oracle may not be configured.', 'error');
           setLoading(false);
           return;
@@ -182,16 +187,6 @@ export default function SwapSection() {
           return;
         }
         
-        // Log debug info
-        console.log('[Swap Debug]', {
-          pusdAmount: formatBalance(pusdWei),
-          quotePol: formatBalance(quotePol),
-          feePol: formatBalance(feePol),
-          minPolOut: formatBalance(minPolOut),
-          poolBalance: formatBalance(poolBalance),
-          polAmountBeforeFee: formatBalance(polAmountBeforeFee),
-        });
-        
         await executeTransaction(
           swapContract,
           'swapPUSDtoPOL',
@@ -205,7 +200,6 @@ export default function SwapSection() {
       setQuote('0');
       setFee('0');
     } catch (error: any) {
-      console.error('Swap failed:', error);
       showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);

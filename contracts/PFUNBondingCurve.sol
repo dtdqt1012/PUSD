@@ -22,28 +22,25 @@ interface IPFUNLaunchpad {
  */
 contract PFUNBondingCurve is Ownable, ReentrancyGuard {
     PUSDToken public pusdToken;
-    address public launchpad; // PFUNLaunchpad address
-    
-    // Bonding curve parameters
-    uint256 public constant INITIAL_PRICE = 1e15; // 0.001 PUSD per token
-    uint256 public constant PRICE_INCREMENT = 1e12; // 0.000001 PUSD increment per token
-    
-    // Token => Curve info
+    address public launchpad; 
+
+    uint256 public constant INITIAL_PRICE = 1e15; 
+    uint256 public constant PRICE_INCREMENT = 1e12; 
+
     mapping(address => CurveInfo) public curves;
     
     modifier onlyLaunchpad() {
         require(msg.sender == launchpad, "PFUNBondingCurve: Only launchpad");
         _;
     }
-    
-    // Packed struct for gas optimization
+
     struct CurveInfo {
-        address token;          // 20 bytes
-        uint128 tokensSold;     // Packed
-        uint128 pusdRaised;     // Packed
-        uint128 totalSupply;    // Packed
-        uint128 initialPrice;   // Packed - initial price in wei (18 decimals)
-        bool isActive;          // 1 byte
+        address token;          
+        uint128 tokensSold;     
+        uint128 pusdRaised;     
+        uint128 totalSupply;    
+        uint128 initialPrice;   
+        bool isActive;          
     }
     
     event TokensBought(
@@ -90,16 +87,35 @@ contract PFUNBondingCurve is Ownable, ReentrancyGuard {
         uint128 initialTokensSold = 0;
         uint128 initialPusdRaised = 0;
         uint128 initialPrice = uint128(INITIAL_PRICE);
-        
-        // If initialPusdAmount > 0, buy 1% of supply to set initial price
+
         if (initialPusdAmount > 0) {
-            // 1% of total supply
-            uint256 onePercentSupply = (totalSupply * 1) / 100;
-            initialTokensSold = uint128(onePercentSupply);
+            uint256 totalSupplyActual = totalSupply / 1e18;
+            
+            uint256 initialPriceWei;
+            if (totalSupplyActual > 0) {
+                initialPriceWei = (1000000 * 1e18) / totalSupplyActual;
+            } else {
+                initialPriceWei = 1e15;
+            }
+
+            if (initialPriceWei == 0) {
+                initialPriceWei = 1;
+            }
+
+            uint256 tokensToBuyWei = (initialPusdAmount * 1e18) / initialPriceWei;
+
+            if (tokensToBuyWei > totalSupply) {
+                tokensToBuyWei = totalSupply;
+            }
+
+            if (tokensToBuyWei == 0) {
+                tokensToBuyWei = 1e18;
+            }
+            
+            initialTokensSold = uint128(tokensToBuyWei);
             initialPusdRaised = uint128(initialPusdAmount);
-            // Calculate initial price from launch amount and 1% supply
-            // initialPrice = (initialPusdAmount * 1e18) / onePercentSupply
-            initialPrice = uint128((initialPusdAmount * 1e18) / onePercentSupply);
+
+            initialPrice = uint128(initialPriceWei);
         }
         
         curves[token] = CurveInfo({
@@ -140,47 +156,87 @@ contract PFUNBondingCurve is Ownable, ReentrancyGuard {
         CurveInfo storage curve = curves[token];
         require(curve.isActive, "PFUNBondingCurve: Curve not active");
         require(pusdAmount > 0, "PFUNBondingCurve: Amount must be > 0");
+
+        uint128 cachedTokensSold = curve.tokensSold;
+        uint128 cachedTotalSupply = curve.totalSupply;
+        uint128 cachedInitialPrice = curve.initialPrice;
+
+        uint256 tokensAvailable = uint256(cachedTotalSupply) - uint256(cachedTokensSold);
+        require(tokensAvailable > 0, "PFUNBondingCurve: No tokens available");
+
+        uint256 priceIncrement = uint256(cachedInitialPrice) / 10000;
+        if (priceIncrement == 0) {
+            priceIncrement = PRICE_INCREMENT;
+        }
         
-        // Calculate tokens to receive using average price (current and next)
-        // This ensures price increases with each purchase
-        uint256 currentPrice = getCurrentPrice(token);
-        uint256 nextPrice = currentPrice + PRICE_INCREMENT;
-        uint256 avgPrice = (currentPrice + nextPrice) / 2;
-        tokensReceived = (pusdAmount * 1e18) / avgPrice;
+        uint256 currentPrice = uint256(cachedInitialPrice) + ((uint256(cachedTokensSold) * priceIncrement) / 1e18);
+        require(currentPrice > 0, "PFUNBondingCurve: Invalid current price");
         
-        uint128 newTokensSold = curve.tokensSold + uint128(tokensReceived);
+        uint256 maxTokensFromPrice = (pusdAmount * 1e18) / currentPrice;
+        if (maxTokensFromPrice == 0) {
+            require(false, "PFUNBondingCurve: Amount too small");
+        }
+        
+        uint256 actualPusdAmount;
+        uint256 estimatedTokens = (pusdAmount * 1e18) / currentPrice;
+        
+        if (estimatedTokens >= tokensAvailable) {
+            tokensReceived = tokensAvailable;
+            uint256 finalTokensSold = uint256(cachedTokensSold) + tokensAvailable;
+            uint256 finalPrice = uint256(cachedInitialPrice) + ((finalTokensSold * priceIncrement) / 1e18);
+            uint256 avgPrice = (currentPrice + finalPrice) / 2;
+            require(avgPrice > 0, "PFUNBondingCurve: Invalid average price");
+            actualPusdAmount = (tokensAvailable * avgPrice) / 1e18;
+            require(actualPusdAmount > 0, "PFUNBondingCurve: Actual PUSD amount must be > 0");
+            require(actualPusdAmount <= pusdAmount, "PFUNBondingCurve: Actual PUSD exceeds requested");
+        } else {
+            uint256 finalTokensSold = uint256(cachedTokensSold) + estimatedTokens;
+            uint256 finalPrice = uint256(cachedInitialPrice) + ((finalTokensSold * priceIncrement) / 1e18);
+            uint256 avgPrice = (currentPrice + finalPrice) / 2;
+            require(avgPrice > 0, "PFUNBondingCurve: Invalid average price");
+            
+            tokensReceived = (pusdAmount * 1e18) / avgPrice;
+            require(tokensReceived > 0, "PFUNBondingCurve: Calculated tokens must be > 0");
+            require(tokensReceived <= tokensAvailable, "PFUNBondingCurve: Calculated tokens exceed available");
+            
+            uint256 verifyFinalTokensSold = uint256(cachedTokensSold) + tokensReceived;
+            uint256 verifyFinalPrice = uint256(cachedInitialPrice) + ((verifyFinalTokensSold * priceIncrement) / 1e18);
+            uint256 verifyAvgPrice = (currentPrice + verifyFinalPrice) / 2;
+            actualPusdAmount = (tokensReceived * verifyAvgPrice) / 1e18;
+            require(actualPusdAmount > 0, "PFUNBondingCurve: Actual PUSD amount must be > 0");
+            require(actualPusdAmount <= pusdAmount, "PFUNBondingCurve: Actual PUSD exceeds requested");
+        }
+        
+        require(tokensReceived > 0, "PFUNBondingCurve: No tokens to receive");
+        
+        uint128 newTokensSold = cachedTokensSold + uint128(tokensReceived);
         require(
-            newTokensSold <= curve.totalSupply,
+            newTokensSold <= cachedTotalSupply,
             "PFUNBondingCurve: Insufficient tokens"
         );
         
-        // Transfer PUSD from buyer
+        require(actualPusdAmount > 0, "PFUNBondingCurve: Actual PUSD amount must be > 0");
+
         require(
-            pusdToken.transferFrom(msg.sender, address(this), pusdAmount),
+            pusdToken.transferFrom(msg.sender, address(this), actualPusdAmount),
             "PFUNBondingCurve: PUSD transfer failed"
         );
-        
-        // Transfer tokens to buyer
+
         require(
             IERC20(token).transfer(msg.sender, tokensReceived),
             "PFUNBondingCurve: Token transfer failed"
         );
-        
-        // Update curve (packed)
+
         curve.tokensSold = newTokensSold;
-        curve.pusdRaised += uint128(pusdAmount);
-        
-        // Check for auto-listing based on LP (pusdRaised)
-        // After updating pusdRaised, check if threshold reached
+        curve.pusdRaised = curve.pusdRaised + uint128(actualPusdAmount);
+
         if (launchpad != address(0)) {
             try IPFUNLaunchpad(launchpad).checkAndList(token) {
-                // Auto-listed successfully when LP threshold reached
             } catch {
-                // Not ready to list yet or already listed
             }
         }
         
-        emit TokensBought(token, msg.sender, tokensReceived, pusdAmount);
+        emit TokensBought(token, msg.sender, tokensReceived, actualPusdAmount);
         
         return tokensReceived;
     }
@@ -194,34 +250,31 @@ contract PFUNBondingCurve is Ownable, ReentrancyGuard {
         require(curve.isActive, "PFUNBondingCurve: Curve not active");
         require(tokenAmount > 0, "PFUNBondingCurve: Amount must be > 0");
         require(curve.tokensSold >= tokenAmount, "PFUNBondingCurve: Insufficient tokens sold");
-        
-        // Calculate PUSD to receive using average price (current and previous)
-        // This ensures price decreases with each sale
+
         uint256 currentPrice = getCurrentPrice(token);
-        uint256 prevPrice = currentPrice > PRICE_INCREMENT ? currentPrice - PRICE_INCREMENT : currentPrice;
+        uint256 priceIncrement = uint256(curve.initialPrice) / 10000;
+        if (priceIncrement == 0) {
+            priceIncrement = PRICE_INCREMENT;
+        }
+        uint256 prevTokensSold = uint256(curve.tokensSold) > 1e18 ? uint256(curve.tokensSold) - 1e18 : 0;
+        uint256 prevPrice = prevTokensSold > 0 
+            ? uint256(curve.initialPrice) + ((prevTokensSold * priceIncrement) / 1e18)
+            : uint256(curve.initialPrice);
         uint256 avgPrice = (currentPrice + prevPrice) / 2;
         
         pusdReceived = (tokenAmount * avgPrice) / 1e18;
         require(pusdReceived > 0, "PFUNBondingCurve: No PUSD to return");
-        
-        // Check if we have enough PUSD in the curve
+
         require(uint256(curve.pusdRaised) >= pusdReceived, "PFUNBondingCurve: Insufficient PUSD in curve");
-        
-        // Transfer tokens from seller
+
         require(
             IERC20(token).transferFrom(msg.sender, address(this), tokenAmount),
             "PFUNBondingCurve: Token transfer failed"
         );
-        
-        // Update curve BEFORE transfer (to prevent reentrancy)
-        // tokensSold decreases, so price will decrease for next sell
+
         curve.tokensSold = curve.tokensSold - uint128(tokenAmount);
         curve.pusdRaised = curve.pusdRaised - uint128(pusdReceived);
-        
-        // Note: Sell reduces LP, so we don't check for listing on sell
-        // Only check on buy when LP increases
-        
-        // Transfer PUSD to seller
+
         require(
             pusdToken.transfer(msg.sender, pusdReceived),
             "PFUNBondingCurve: PUSD transfer failed"
@@ -233,25 +286,37 @@ contract PFUNBondingCurve is Ownable, ReentrancyGuard {
     }
     
     /**
+     * @dev Get initial price for a token (price at launch, before any tokens are bought)
+     * @param token Token address
+     * @return Initial price in wei (18 decimals)
+     */
+    function getInitialPrice(address token) public view returns (uint256) {
+        CurveInfo storage curve = curves[token];
+        if (!curve.isActive) return 0;
+        return uint256(curve.initialPrice);
+    }
+    
+    /**
      * @dev Get current price for a token
      * Price increases linearly: price = initialPrice + (tokensSold * PRICE_INCREMENT)
      * This ensures price increases with each purchase
      * Fallback: if initialPrice is 0 (old contract), calculate from pusdRaised / tokensSold
+     * Gas optimization: Use storage pointer instead of memory copy when possible
      */
     function getCurrentPrice(address token) public view returns (uint256) {
-        CurveInfo memory curve = curves[token];
+        CurveInfo storage curve = curves[token];
         if (!curve.isActive) return 0;
-        
-        // If initialPrice is 0, it's an old contract - calculate from actual PUSD raised
+
         if (curve.initialPrice == 0 && curve.tokensSold > 0 && curve.pusdRaised > 0) {
-            // Price = pusdRaised / tokensSold (both in wei, result in wei)
             return (uint256(curve.pusdRaised) * 1e18) / uint256(curve.tokensSold);
         }
-        
-        // Price increases linearly: initialPrice + (tokensSold / 1e18) * PRICE_INCREMENT
-        // tokensSold is in wei (18 decimals), so divide by 1e18 first
-        // This ensures price increases with each purchase
-        return uint256(curve.initialPrice) + ((uint256(curve.tokensSold) * PRICE_INCREMENT) / 1e18);
+
+        uint256 tokensSold = uint256(curve.tokensSold);
+        uint256 priceIncrement = uint256(curve.initialPrice) / 10000;
+        if (priceIncrement == 0) {
+            priceIncrement = PRICE_INCREMENT;
+        }
+        return uint256(curve.initialPrice) + ((tokensSold * priceIncrement) / 1e18);
     }
     
     /**

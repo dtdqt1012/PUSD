@@ -139,36 +139,6 @@ export function useCollateralRatio(refreshInterval: number = 30000) {
           finalPusdSupply
         );
         
-        // Debug log để kiểm tra tính toán (luôn log để debug)
-        console.log('[Collateral Ratio Debug]', {
-          // Raw values (wei)
-          polInVault_wei: polInVault.toString(),
-          polInSwapPool_wei: polInSwapPool.toString(),
-          polPrice_wei: polPrice.toString(),
-          totalPusdSupply_wei: totalPusdSupply.toString(),
-          pusdInVault_wei: pusdInVault.toString(),
-          pusdInStaking_wei: pusdInStaking.toString(),
-          pusdInSwap_wei: pusdInSwap.toString(),
-          pusdInPgoldVault_wei: pusdInPgoldVault.toString(),
-          // Formatted values
-          polInVault: formatBalance(polInVault),
-          polInSwapPool: formatBalance(polInSwapPool),
-          polPrice: formatPrice(polPrice),
-          polValueUSD: formatBalance(polValueUSD),
-          poolReservesUSD: formatBalance(poolReservesUSD),
-          totalPusdSupply: formatBalance(totalPusdSupply),
-          pusdInVault: formatBalance(pusdInVault),
-          pusdInStaking: formatBalance(pusdInStaking),
-          pusdInSwap: formatBalance(pusdInSwap),
-          pusdInPgoldVault: formatBalance(pusdInPgoldVault),
-          pusdUsersHold: formatBalance(pusdUsersHold),
-          denominator: formatBalance(denominator),
-          finalPusdSupply: formatBalance(finalPusdSupply),
-          ratio: ratio.toFixed(2) + '%',
-          // Calculation breakdown
-          calculation: `(${formatBalance(polInVault)} POL × $${formatPrice(polPrice)}) / (${formatBalance(pusdUsersHold)} PUSD + ${formatBalance(poolReservesUSD)} USD) × 100 = ${ratio.toFixed(2)}%`,
-        });
-
         setData({
           ratio,
           polInVault,
@@ -180,7 +150,7 @@ export function useCollateralRatio(refreshInterval: number = 30000) {
           error: null,
         });
       } catch (error) {
-        console.error('Failed to load collateral ratio:', error);
+        // Failed to load collateral ratio
         setData(prev => ({
           ...prev,
           loading: false,

@@ -43,24 +43,9 @@ export default function PGOLDRedeemSection() {
         ]);
 
         const [balance, fee, price] = await Promise.allSettled([
-          loadWithTimeout(() => pgoldContract.balanceOf(account), 15000).catch((err) => {
-            if (err?.message !== 'Timeout') {
-              console.warn('Failed to load PGOLD balance:', err);
-            }
-            return null;
-          }),
-          loadWithTimeout(() => vaultContract.redeemFeeBPS(), 15000).catch((err) => {
-            if (err?.message !== 'Timeout') {
-              console.warn('Failed to load redeem fee:', err);
-            }
-            return null;
-          }),
-          loadWithTimeout(() => oracleContract.getGoldPrice(), 15000).catch((err) => {
-            if (err?.message !== 'Timeout') {
-              console.warn('Failed to load gold price:', err);
-            }
-            return null;
-          }),
+          loadWithTimeout(() => pgoldContract.balanceOf(account), 15000).catch(() => null),
+          loadWithTimeout(() => vaultContract.redeemFeeBPS(), 15000).catch(() => null),
+          loadWithTimeout(() => oracleContract.getGoldPrice(), 15000).catch(() => null),
         ]);
 
         if (mountedRef.current) {
@@ -81,17 +66,16 @@ export default function PGOLDRedeemSection() {
           );
         }
       } catch (error: any) {
-        console.error('Failed to load data:', error);
-        // Silently handle RPC errors - don't spam console
-        if (error?.code !== -32603 && error?.message !== 'Internal JSON-RPC error.') {
-          console.error('RPC Error details:', error);
-        }
+        // Silently handle RPC errors
       }
     };
 
+    // Add delay before initial load
+    // Load immediately
     loadData();
-    // Increase interval to 60 seconds to reduce RPC calls
-    const interval = setInterval(loadData, 60000);
+    
+    // Increase interval to 10 minutes to reduce RPC calls
+    const interval = setInterval(loadData, 600000);
     return () => clearInterval(interval);
   }, [provider, account]);
 
@@ -125,7 +109,7 @@ export default function PGOLDRedeemSection() {
           setPusdReceive(formatBalance(pusdAmount));
         }
       } catch (error) {
-        console.error('Failed to calculate PUSD:', error);
+        // Failed to calculate PUSD
         if (mountedRef.current) {
           setPusdReceive('');
         }
@@ -204,7 +188,7 @@ export default function PGOLDRedeemSection() {
       setPgoldAmount('');
       setPusdReceive('');
     } catch (error: any) {
-      console.error('Redeem failed:', error);
+      // Redeem failed
       showNotification(getTransactionErrorMessage(error), 'error');
     } finally {
       setLoading(false);

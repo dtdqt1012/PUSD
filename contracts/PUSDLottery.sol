@@ -7,12 +7,14 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./PUSD.sol";
 import "./RewardDistributor.sol";
-import "./StakingPool.sol";
+import "./LockToEarnPool.sol";
+import "./EcosystemTracker.sol";
 
 contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     // Constants
     uint256 public constant TICKET_PRICE = 0.1e18; // 0.1 PUSD
     uint256 public constant AUTO_CLAIM_THRESHOLD = 100e18; // 100 PUSD
+    uint256 public constant MAX_TICKETS_PER_DAY = 6; // Maximum 6 tickets per day per user
     
     // Revenue split (basis points: 10000 = 100%)
     uint256 public constant JACKPOT_SPLIT = 8000; // 80%
@@ -27,8 +29,11 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant FOURTH_PRIZE_SPLIT = 500; // 5%
     uint256 public constant CONSOLATION_AMOUNT = 1e18; // 1 PUSD
     
-    // Staking integration
-    uint256 public constant FREE_TICKET_THRESHOLD = 100e18; // 100 PUSD = 1 free ticket/week
+    // Free ticket thresholds based on PUSD balance
+    uint256 public constant FREE_TICKET_THRESHOLD_1 = 1000e18; // 1000 PUSD = 1 ticket/week
+    uint256 public constant FREE_TICKET_THRESHOLD_2 = 2000e18; // 2000 PUSD = 2 tickets/week
+    uint256 public constant FREE_TICKET_THRESHOLD_3 = 5000e18; // 5000 PUSD = 5 tickets/week
+    uint256 public constant FREE_TICKET_THRESHOLD_4 = 10000e18; // 10000 PUSD = 12 tickets/week
     
     // Draw schedule
     uint256 public constant DAILY_DRAW_HOUR = 20; // 20:00 UTC
@@ -37,8 +42,9 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     // Contracts
     PUSDToken public pusdToken;
     RewardDistributor public rewardDistributor;
-    StakingPool public stakingPool;
+    LockToEarnPool public lockToEarnPool;
     address public developmentFund;
+    EcosystemTracker public ecosystemTracker;
     
     // Draw types
     enum DrawType { Daily, Weekly }
@@ -92,9 +98,12 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant COMMIT_DURATION = 1 days; // 1 day to commit
     uint256 public constant REVEAL_DURATION = 1 days; // 1 day to reveal after commit deadline
     
-    // Free tickets for stakers
+    // Free tickets for PUSD holders
     mapping(address => uint256) public lastFreeTicketClaim; // user => week timestamp
     mapping(address => uint256) public freeTicketsClaimed; // user => count this week
+    
+    // Ticket limit per day tracking (resets daily)
+    mapping(address => mapping(uint256 => uint256)) public dailyTicketsPurchased; // user => day timestamp => count
     
     // Events
     event TicketsPurchased(address indexed user, uint256[] ticketIds, uint256[] numbers, uint256 drawId);
@@ -109,18 +118,18 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     constructor(
         address _pusdToken,
         address _rewardDistributor,
-        address _stakingPool,
+        address _lockToEarnPool,
         address _developmentFund,
         address initialOwner
     ) Ownable(initialOwner) {
         require(_pusdToken != address(0), "PUSDLottery: Invalid PUSD token");
         require(_rewardDistributor != address(0), "PUSDLottery: Invalid RewardDistributor");
-        require(_stakingPool != address(0), "PUSDLottery: Invalid StakingPool");
+        require(_lockToEarnPool != address(0), "PUSDLottery: Invalid LockToEarnPool");
         require(_developmentFund != address(0), "PUSDLottery: Invalid development fund");
         
         pusdToken = PUSDToken(_pusdToken);
         rewardDistributor = RewardDistributor(payable(_rewardDistributor));
-        stakingPool = StakingPool(payable(_stakingPool));
+        lockToEarnPool = LockToEarnPool(payable(_lockToEarnPool));
         developmentFund = _developmentFund;
         
         // Initialize first draw
@@ -143,6 +152,14 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     function buyTickets(uint256 quantity) external nonReentrant whenNotPaused {
         require(quantity > 0, "PUSDLottery: Quantity must be > 0");
         require(quantity <= 1000, "PUSDLottery: Max 1000 tickets per transaction");
+        
+        // Check ticket limit per day (6 tickets per day, resets daily)
+        uint256 currentDay = block.timestamp / 1 days;
+        uint256 ticketsToday = dailyTicketsPurchased[msg.sender][currentDay];
+        require(
+            ticketsToday + quantity <= MAX_TICKETS_PER_DAY,
+            "PUSDLottery: Exceeds ticket limit per day (6 tickets per day)"
+        );
         
         uint256 totalCost = quantity * TICKET_PRICE;
         require(
@@ -194,15 +211,38 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
         draws[currentDrawId].ticketsSold += quantity;
         draws[currentDrawId].jackpot = jackpotPool;
         
+        // Update ticket count for current day (resets daily)
+        dailyTicketsPurchased[msg.sender][currentDay] += quantity;
+        
         emit TicketsPurchased(msg.sender, ticketIds, numbers, currentDrawId);
     }
     
     /**
-     * @dev Claim free ticket for PUSD holders (100 PUSD = 1 ticket/week)
+     * @dev Get number of free tickets based on PUSD balance
+     * 1000 PUSD = 1 ticket, 2000 PUSD = 2 tickets, 5000 PUSD = 5 tickets, 10000 PUSD = 12 tickets
+     */
+    function getFreeTicketsForBalance(uint256 balance) public pure returns (uint256) {
+        if (balance >= FREE_TICKET_THRESHOLD_4) {
+            return 12;
+        } else if (balance >= FREE_TICKET_THRESHOLD_3) {
+            return 5;
+        } else if (balance >= FREE_TICKET_THRESHOLD_2) {
+            return 2;
+        } else if (balance >= FREE_TICKET_THRESHOLD_1) {
+            return 1;
+        }
+        return 0;
+    }
+    
+    /**
+     * @dev Claim free tickets for PUSD holders
+     * Based on PUSD balance: 1000 PUSD = 1 ticket, 2000 PUSD = 2 tickets, 5000 PUSD = 5 tickets, 10000 PUSD = 12 tickets
      */
     function claimFreeTicket() external nonReentrant whenNotPaused {
-        uint256 userBalance = pusdToken.balanceOf(msg.sender);
-        require(userBalance >= FREE_TICKET_THRESHOLD, "PUSDLottery: Need at least 100 PUSD");
+        // Check user's PUSD balance
+        uint256 pusdBalance = pusdToken.balanceOf(msg.sender);
+        uint256 freeTicketsCount = getFreeTicketsForBalance(pusdBalance);
+        require(freeTicketsCount > 0, "PUSDLottery: Need at least 1000 PUSD balance");
         
         // Check if user can claim this week
         uint256 currentWeek = block.timestamp / 1 weeks;
@@ -211,25 +251,33 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
             "PUSDLottery: Already claimed this week"
         );
         
-        // Generate free ticket
-        uint256 ticketId = getNextTicketId();
-        uint256 number = generateRandomNumber(ticketId, msg.sender, block.timestamp);
+        // Generate free tickets
+        uint256[] memory ticketIds = new uint256[](freeTicketsCount);
+        uint256[] memory numbers = new uint256[](freeTicketsCount);
         
-        tickets[ticketId] = Ticket({
-            owner: msg.sender,
-            number: number,
-            drawId: currentDrawId,
-            claimed: false,
-            prizeAmount: 0,
-            prizeTier: 0
-        });
+        for (uint256 i = 0; i < freeTicketsCount; i++) {
+            uint256 ticketId = getNextTicketId();
+            uint256 number = generateRandomNumber(ticketId, msg.sender, block.timestamp + i);
+            
+            tickets[ticketId] = Ticket({
+                owner: msg.sender,
+                number: number,
+                drawId: currentDrawId,
+                claimed: false,
+                prizeAmount: 0,
+                prizeTier: 0
+            });
+            
+            userTickets[msg.sender].push(ticketId);
+            ticketIds[i] = ticketId;
+            numbers[i] = number;
+            draws[currentDrawId].ticketsSold++;
+        }
         
-        userTickets[msg.sender].push(ticketId);
         lastFreeTicketClaim[msg.sender] = currentWeek;
-        freeTicketsClaimed[msg.sender]++;
-        draws[currentDrawId].ticketsSold++;
+        freeTicketsClaimed[msg.sender] += freeTicketsCount;
         
-        emit FreeTicketClaimed(msg.sender, ticketId, number);
+        emit FreeTicketClaimed(msg.sender, ticketIds[0], numbers[0]);
     }
     
     /**
@@ -728,14 +776,57 @@ contract PUSDLottery is Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Check if user can claim free ticket
+     * @dev Get number of free tickets user can claim based on PUSD balance
+     */
+    function getFreeTicketsAvailable(address user) external view returns (uint256) {
+        uint256 pusdBalance = pusdToken.balanceOf(user);
+        uint256 freeTicketsCount = getFreeTicketsForBalance(pusdBalance);
+        
+        if (freeTicketsCount == 0) {
+            return 0;
+        }
+        
+        uint256 currentWeek = block.timestamp / 1 weeks;
+        if (lastFreeTicketClaim[user] >= currentWeek) {
+            return 0;
+        }
+        
+        return freeTicketsCount;
+    }
+    
+    /**
+     * @dev Check if user can claim free ticket (based on PUSD balance)
      */
     function canClaimFreeTicket(address user) external view returns (bool) {
-        if (pusdToken.balanceOf(user) < FREE_TICKET_THRESHOLD) {
+        uint256 pusdBalance = pusdToken.balanceOf(user);
+        uint256 freeTicketsCount = getFreeTicketsForBalance(pusdBalance);
+        
+        if (freeTicketsCount == 0) {
             return false;
         }
+        
         uint256 currentWeek = block.timestamp / 1 weeks;
         return lastFreeTicketClaim[user] < currentWeek;
+    }
+    
+    /**
+     * @dev Get remaining tickets user can buy today
+     */
+    function getRemainingTicketsToday(address user) external view returns (uint256) {
+        uint256 currentDay = block.timestamp / 1 days;
+        uint256 ticketsToday = dailyTicketsPurchased[user][currentDay];
+        if (ticketsToday >= MAX_TICKETS_PER_DAY) {
+            return 0;
+        }
+        return MAX_TICKETS_PER_DAY - ticketsToday;
+    }
+    
+    /**
+     * @dev Get number of tickets user has purchased today
+     */
+    function getTicketsPurchasedToday(address user) external view returns (uint256) {
+        uint256 currentDay = block.timestamp / 1 days;
+        return dailyTicketsPurchased[user][currentDay];
     }
     
     /**

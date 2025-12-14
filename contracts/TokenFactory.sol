@@ -12,25 +12,21 @@ import "./PUSD.sol";
  */
 contract TokenFactory is Ownable {
     PUSDToken public pusdToken;
-    
-    // Launch fee in PUSD (6.666 PUSD)
-    uint256 public launchFee = 6666 * 1e15; // 6.666 PUSD
-    
-    // Total tokens created
+
+    uint256 public launchFee = 1e18; 
+
     uint256 public totalTokensCreated;
-    
-    // Mapping: token address => launch info
+
     mapping(address => LaunchInfo) public launches;
-    
-    // Packed struct for gas optimization
+
     struct LaunchInfo {
-        address creator;            // 20 bytes
-        uint128 totalSupply;         // Packed
-        uint128 launchFeePaid;       // Packed
-        uint64 createdAt;           // Packed
-        bool isActive;              // 1 byte
-        string name;                // Stored separately
-        string symbol;               // Stored separately
+        address creator;            
+        uint128 totalSupply;         
+        uint128 launchFeePaid;       
+        uint64 createdAt;           
+        bool isActive;              
+        string name;                
+        string symbol;               
     }
     
     event TokenCreated(
@@ -41,12 +37,11 @@ contract TokenFactory is Ownable {
         uint256 totalSupply,
         uint256 launchFee
     );
-    
-    // Helper function to validate URL format (basic check)
+
     function _isValidUrl(string memory url) private pure returns (bool) {
         bytes memory urlBytes = bytes(url);
         if (urlBytes.length == 0) return false;
-        // Check if starts with http:// or https://
+        
         if (urlBytes.length < 8) return false;
         bytes memory prefix = new bytes(7);
         for (uint i = 0; i < 7; i++) {
@@ -90,59 +85,23 @@ contract TokenFactory is Ownable {
                require(bytes(symbol).length > 0, "TokenFactory: Symbol required");
                require(totalSupply > 0, "TokenFactory: Supply must be > 0");
                require(initialOwner != address(0), "TokenFactory: Invalid owner");
-               
-               // Owner can create tokens for free
-               // When called by launchpad: msg.sender = launchpad, initialOwner = user (msg.sender from launchpad)
-               // Check if initialOwner (user) is owner of TokenFactory
-               // Launchpad already checked if user is owner and set factoryFee = 0 if so
-               // So if launchpad doesn't transfer fee, it means user is owner
-               bool isOwnerLaunch = (msg.sender == owner()) || (initialOwner == owner());
-               if (!isOwnerLaunch) {
-                   // Launchpad should have approved TokenFactory to pull fee
-                   // Try to pull fee from launchpad (msg.sender)
-                   uint256 balanceBefore = pusdToken.balanceOf(address(this));
-                   bool feeReceived = false;
-                   
-                   // Try to pull fee from launchpad
-                   try pusdToken.transferFrom(msg.sender, address(this), launchFee) returns (bool success) {
-                       if (success) {
-                           feeReceived = true;
-                       }
-                   } catch {
-                       // TransferFrom failed (no allowance or insufficient balance)
-                   }
-                   
-                   // If fee not received via transferFrom, check if balance increased
-                   // If balance didn't increase, it means launchpad didn't transfer fee (user is owner)
-                   if (!feeReceived) {
-                       uint256 balanceAfter = pusdToken.balanceOf(address(this));
-                       uint256 balanceIncrease = balanceAfter - balanceBefore;
-                       // If balance didn't increase, launchpad didn't transfer fee (user is owner, free launch)
-                       // Only require fee if balance actually increased (non-owner launch)
-                       if (balanceIncrease > 0) {
-                           require(
-                               balanceIncrease >= launchFee,
-                               "TokenFactory: Launch fee not paid"
-                           );
-                       }
-                       // If balanceIncrease == 0, it means launchpad didn't transfer fee
-                       // This is OK if user is owner (launchpad set factoryFee = 0)
-                       // But we can't verify that here, so we allow it
-                       // Launchpad is responsible for checking owner status
-                   }
-               }
-        
-        // Create new ERC20 token
-        // Mint to launchpad (msg.sender), launchpad will transfer to bonding curve
-        // This is pump.fun style - all tokens go to bonding curve for trading
+
+        bool isOwnerLaunch = (msg.sender == owner()) || (initialOwner == owner());
+        if (!isOwnerLaunch) {
+            require(
+                pusdToken.transferFrom(msg.sender, address(this), launchFee),
+                "TokenFactory: Launch fee transfer failed"
+            );
+            pusdToken.burn(launchFee);
+        }
+
         MemeToken newToken = new MemeToken(name, symbol, totalSupply, msg.sender);
         tokenAddress = address(newToken);
-        
-        // Record launch info (packed for gas optimization)
+
         launches[tokenAddress] = LaunchInfo({
             creator: msg.sender,
             totalSupply: uint128(totalSupply),
-            launchFeePaid: uint128(isOwnerLaunch ? 0 : launchFee), // Set to 0 if owner
+            launchFeePaid: uint128(isOwnerLaunch ? 0 : launchFee),
             createdAt: uint64(block.timestamp),
             isActive: true,
             name: name,
