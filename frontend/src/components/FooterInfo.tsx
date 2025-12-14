@@ -10,7 +10,7 @@ const FooterInfo = memo(function FooterInfo() {
       color: '#00ff00',
       fontFamily: 'Courier New, monospace'
     }}>
-      <div style={{ marginBottom: '1rem' }}>
+      <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
         <a 
           href="mailto:tdat@gjteam.org"
           style={{
@@ -26,6 +26,25 @@ const FooterInfo = memo(function FooterInfo() {
           }}
         >
           tdat@gjteam.org
+        </a>
+        <span style={{ opacity: 0.5 }}>|</span>
+        <a 
+          href="https://x.com/_PUSD" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{
+            color: '#00ff00',
+            textDecoration: 'none',
+            fontSize: '0.9rem'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.textDecoration = 'underline';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.textDecoration = 'none';
+          }}
+        >
+          X
         </a>
       </div>
       <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
