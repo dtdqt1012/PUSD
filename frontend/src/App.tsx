@@ -31,7 +31,19 @@ function Navigation() {
   return (
     <nav className="main-nav">
       <div className="nav-container">
-        <Link to="/" className="nav-logo">
+        <Link to="/" className="nav-logo" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <img 
+            src="/pusd-logo.png" 
+            alt="PUSD Logo" 
+            style={{ 
+              width: '32px', 
+              height: '32px',
+              borderRadius: '4px'
+            }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
           <span className="terminal-prompt">&gt;</span> POLYGON USD
         </Link>
         <div className="nav-links">
