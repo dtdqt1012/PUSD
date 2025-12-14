@@ -3,7 +3,7 @@ import { useWeb3 } from '../../hooks/useWeb3';
 import { CONTRACTS } from '../../config/contracts';
 import { ethers } from 'ethers';
 import { useNotification } from '../../contexts/NotificationContext';
-import { callWithRpcFallback, createFallbackProvider } from '../../utils/rpcProvider';
+import { callWithRpcFallback } from '../../utils/rpcProvider';
 
 interface Ticket {
   ticketId: string;
@@ -209,11 +209,6 @@ export default function MyTickets({ isActive = false }: MyTicketsProps) {
         // New tickets will be in the NEW draw (currentDrawId), not the resolved draw
         // So we should update targetDrawId to current draw to show new tickets
         try {
-          const lotteryContract = new ethers.Contract(
-            CONTRACTS.PUSDLottery.address,
-            CONTRACTS.PUSDLottery.abi,
-            provider
-          );
           const currentDrawId = await callWithRpcFallback(async (rpcProvider) => {
             const contract = new ethers.Contract(
               CONTRACTS.PUSDLottery.address,
@@ -289,11 +284,6 @@ export default function MyTickets({ isActive = false }: MyTicketsProps) {
         
         // Update targetDrawId to current draw (where new tickets are added)
         try {
-          const lotteryContract = new ethers.Contract(
-            CONTRACTS.PUSDLottery.address,
-            CONTRACTS.PUSDLottery.abi,
-            provider
-          );
           const currentDrawId = await callWithRpcFallback(async (rpcProvider) => {
             const contract = new ethers.Contract(
               CONTRACTS.PUSDLottery.address,
@@ -435,7 +425,7 @@ export default function MyTickets({ isActive = false }: MyTicketsProps) {
         
         for (let i = 0; i < Math.min(ticketIds.length, maxTicketsToLoad); i += batchSize) {
           const batch = ticketIds.slice(i, i + batchSize);
-          const batchPromises = batch.map(async (id) => {
+          const batchPromises = batch.map(async (id: string) => {
             try {
               // Use callWithRpcFallback for each ticket to handle RPC errors
               const ticket = await callWithRpcFallback(async (rpcProvider) => {

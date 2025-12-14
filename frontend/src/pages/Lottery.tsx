@@ -4,7 +4,7 @@ import { CONTRACTS } from '../config/contracts';
 import { ethers } from 'ethers';
 import { useNotification } from '../contexts/NotificationContext';
 import { cache } from '../utils/cache';
-import { callWithRpcFallback, createFallbackProvider } from '../utils/rpcProvider';
+import { callWithRpcFallback } from '../utils/rpcProvider';
 import BuyTickets from '../components/lottery/BuyTickets';
 import MyTickets from '../components/lottery/MyTickets';
 // LotteryStats removed to avoid RPC limit
@@ -20,7 +20,6 @@ export default function Lottery() {
   const [timeUntilDraw, setTimeUntilDraw] = useState<string>('');
   const [triggering, setTriggering] = useState(false);
   const [canTrigger, setCanTrigger] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
 
   const checkOwner = async () => {
     if (!provider || !account || !CONTRACTS.PUSDLottery) {
@@ -335,6 +334,12 @@ export default function Lottery() {
       // Force refresh MyTickets if it's the active tab
       if (activeTab === 'tickets') {
         // Trigger a custom event to refresh MyTickets with draw ID
+        const lotteryContractRead = new ethers.Contract(
+          CONTRACTS.PUSDLottery.address,
+          CONTRACTS.PUSDLottery.abi,
+          provider
+        );
+        const currentDrawId = await lotteryContractRead.currentDrawId();
         const resolvedDrawId = Number(currentDrawId) - 1;
         window.dispatchEvent(new CustomEvent('lottery-draw-triggered', { 
           detail: { drawId: resolvedDrawId } 

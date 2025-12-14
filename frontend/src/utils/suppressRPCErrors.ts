@@ -2,8 +2,6 @@
 // This prevents spam from rate limiting and internal RPC errors
 // Intercepts errors from MetaMask's inpage.js as early as possible
 
-import { shouldSuppressError } from './rpcHandler';
-
 // Helper function to check if an error should be suppressed
 function shouldSuppressRPCError(arg: any): boolean {
   try {
@@ -181,13 +179,6 @@ function shouldSuppressRPCError(arg: any): boolean {
 }
 
 // Intercept errors as early as possible (before MetaMask injects its code)
-if (typeof window !== 'undefined') {
-  // Store original error handlers before MetaMask injects its code
-  const originalErrorHandlers = {
-    onerror: window.onerror,
-    onunhandledrejection: window.onunhandledrejection,
-  };
-}
 
 // Override console.error to filter RPC errors (must be done immediately)
 // Check if already overridden by inline script to avoid infinite recursion

@@ -135,11 +135,6 @@ export async function executeTransaction(
         }
       } catch (feeError: any) {
         // Silently ignore eth_maxPriorityFeePerGas errors - let MetaMask handle gas estimation
-        const isMaxPriorityFeeError = feeError?.code === -32601 || 
-                                      feeError?.message?.includes('eth_maxPriorityFeePerGas') || 
-                                      feeError?.message?.includes('does not exist') ||
-                                      feeError?.message?.includes('is not available');
-        
         // Suppress fee data errors
         // Let MetaMask handle gas estimation by not setting gasPrice
         finalGasPrice = undefined;

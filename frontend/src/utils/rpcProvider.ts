@@ -1,4 +1,4 @@
-import { JsonRpcProvider, FallbackProvider, Provider, Contract } from 'ethers';
+import { JsonRpcProvider, Contract } from 'ethers';
 
 /**
  * RPC endpoints for Polygon Mainnet
@@ -144,7 +144,7 @@ export function createContractWithFallback(address: string, abi: any[]): any {
   
   // Return a proxy object that uses fallback provider for calls
   return new Proxy({}, {
-    get(target, prop) {
+    get(_target, prop) {
       if (typeof prop === 'string' && prop !== 'then' && prop !== 'constructor') {
         // Return a function that uses fallback provider
         return (...args: any[]) => {

@@ -543,9 +543,11 @@ export default function TokenChart({ tokenAddress, height = 300, refreshTrigger 
         const fallbackBlock = await provider.getBlockNumber();
         const block = await provider.getBlock(fallbackBlock);
         if (block) {
+          const finalInitialPriceWei = initialPriceWei > 0n ? initialPriceWei : (curve?.initialPrice || 0n);
+          const initialPrice = Number(ethers.formatEther(finalInitialPriceWei));
           const fallbackData = [{
             time: block.timestamp * 1000,
-            price: parseFloat(initialPriceFormatted),
+            price: initialPrice,
             volume: 0,
           }];
           cache.set(cacheKey, fallbackData, 300000);

@@ -95,7 +95,6 @@ export default function LotteryResults({ isActive = false }: LotteryResultsProps
       });
       
       // Load recent draws (last 10 draws)
-      const drawPromises: Promise<DrawResult | null>[] = [];
       const maxDraws = 10;
       const startDrawId = Math.max(1, Number(currentDrawId) - maxDraws + 1);
       

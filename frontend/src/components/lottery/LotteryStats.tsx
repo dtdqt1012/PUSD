@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useWeb3 } from '../../hooks/useWeb3';
 import { CONTRACTS } from '../../config/contracts';
 import { ethers } from 'ethers';
-import { loadWithTimeout } from '../../utils/loadWithTimeout';
 import { cache } from '../../utils/cache';
 import { callWithRpcFallback, createFallbackProvider } from '../../utils/rpcProvider';
 // API client removed - using direct RPC queries only

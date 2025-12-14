@@ -1,6 +1,5 @@
 // Shared utilities for staking-related operations
 import { Contract } from 'ethers';
-import { CONTRACTS } from '../config/contracts';
 import { rpcBatchHandler } from './rpcHandler';
 
 export interface Stake {
