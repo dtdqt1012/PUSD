@@ -60,4 +60,4 @@ frontend/*.AppImage
 frontend/android/
 frontend/ios/
 frontend/.capacitor/
-
+.
