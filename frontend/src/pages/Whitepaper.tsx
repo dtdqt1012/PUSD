@@ -41,7 +41,7 @@ export default function Whitepaper() {
           <h1 className="whitepaper-title">
             <span className="terminal-prompt">&gt;</span> PUSD Whitepaper
           </h1>
-          <p className="whitepaper-subtitle">Polygon USD: A Native Stablecoin for the Polygon Ecosystem</p>
+          <p className="whitepaper-subtitle">PUSD: Native Stablecoin on Polygon (Independent Project)</p>
           <div className="whitepaper-meta">
             <span>Last Updated: {getRelativeTime()}</span>
           </div>
@@ -52,11 +52,11 @@ export default function Whitepaper() {
           <section className="whitepaper-section">
             <h2 className="section-title">Abstract</h2>
             <p>
-              PUSD (Polygon USD) is a decentralized, over-collateralized stablecoin native to the Polygon blockchain. 
-              Unlike existing stablecoin solutions that require bridging from Ethereum, PUSD is built from the ground up 
-              for Polygon, providing users with a native, transparent, and secure stablecoin experience. PUSD maintains 
-              a 1:1 peg with the US Dollar through over-collateralization with POL (Polygon's native token), ensuring 
-              stability while offering staking rewards to incentivize long-term participation in the ecosystem.
+              PUSD (Polygon USD) is a decentralized, over-collateralized stablecoin on the Polygon network. It is an
+              independent project (not affiliated with Polygon Labs) that targets a 1 USD peg via POL collateral,
+              avoiding bridge dependencies. Built natively on Polygon, PUSD emphasizes on-chain transparency,
+              over-collateralization with POL, real-time price feeds, and staking incentives to align long-term ecosystem
+              participation.
             </p>
           </section>
 
@@ -151,8 +151,9 @@ export default function Whitepaper() {
             
             <h3>3.1 Overview</h3>
             <p>
-              PUSD is a decentralized, over-collateralized stablecoin native to Polygon that addresses all limitations 
-              of bridged solutions.
+              PUSD is a decentralized, over-collateralized stablecoin on the Polygon network (independent, not affiliated
+              with Polygon Labs) that targets a 1 USD peg using POL as collateral. It addresses the limitations of bridged
+              stablecoins by remaining native to Polygon with on-chain transparency and real-time price feeds.
             </p>
 
             <h3>3.2 Key Features</h3>
@@ -492,8 +493,8 @@ Where:
               Launching requires:
             </p>
             <ul>
-              <li><strong>Launch Fee:</strong> 6.666 PUSD (collected by TokenFactory contract)</li>
-              <li><strong>Launch Amount:</strong> PUSD to seed the bonding curve</li>
+              <li><strong>Launch Fee:</strong> 1 PUSD (burned by TokenFactory if launcher is not owner)</li>
+              <li><strong>Launch Amount:</strong> PUSD to seed the bonding curve (minimum 0.06 PUSD)</li>
               <li><strong>Collateral Lock:</strong> 10% of launch amount in PUSD is automatically locked for 30 days</li>
             </ul>
             <p>
@@ -561,7 +562,7 @@ Price is always calculated on-chain for transparency.`}
               Launching a token requires:
             </p>
             <ul>
-              <li><strong>6.666 PUSD:</strong> Fixed launch fee (collected by TokenFactory)</li>
+              <li><strong>1 PUSD:</strong> Fixed launch fee (burned by TokenFactory if not owner)</li>
               <li><strong>Launch Amount:</strong> Initial PUSD to seed the bonding curve (minimum 0.06 PUSD)</li>
               <li><strong>Collateral Lock:</strong> 10% of launch amount in PUSD locked for 30 days</li>
             </ul>
@@ -569,10 +570,10 @@ Price is always calculated on-chain for transparency.`}
               Example: If you launch with 100 PUSD:
             </p>
             <ul>
-              <li>6.666 PUSD goes to launch fee</li>
+              <li>1 PUSD goes to launch fee</li>
               <li>100 PUSD goes to bonding curve</li>
               <li>10 PUSD (10% of 100) is locked as collateral for 30 days</li>
-              <li>Total required: 116.666 PUSD</li>
+              <li>Total required: 101 PUSD</li>
             </ul>
 
             <h4>9.4.2 Trading Mechanics</h4>

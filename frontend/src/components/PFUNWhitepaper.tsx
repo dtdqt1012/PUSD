@@ -119,8 +119,8 @@ Where:
               Launching requires:
             </p>
             <ul style={{ marginLeft: '2rem', marginTop: '0.5rem' }}>
-              <li><strong>Launch Fee:</strong> 6.666 PUSD (collected by TokenFactory contract)</li>
-              <li><strong>Launch Amount:</strong> PUSD to seed the bonding curve</li>
+              <li><strong>Launch Fee:</strong> 1 PUSD (burned by TokenFactory if not owner)</li>
+              <li><strong>Launch Amount:</strong> PUSD to seed the bonding curve (minimum 0.06 PUSD)</li>
               <li><strong>Collateral Lock:</strong> 10% of launch amount in PUSD is automatically locked for 30 days</li>
             </ul>
             <p>
@@ -201,7 +201,7 @@ Price is always calculated on-chain for transparency.`}
               <li>Prevents spam and malicious launches</li>
               <li>Is locked for 30 days (configurable by contract owner)</li>
               <li>Can be claimed back after the unlock period expires using the `unlockCollateral` function</li>
-              <li>Is separate from the launch fee (6.666 PUSD) and launch amount</li>
+              <li>Is separate from the launch fee (1 PUSD) and launch amount</li>
             </ul>
             <p>
               The collateral lock period starts from the moment the token is launched. After 30 days, the creator can call `unlockCollateral` to retrieve their locked PUSD.
@@ -221,7 +221,7 @@ Price is always calculated on-chain for transparency.`}
               Launching a token requires:
             </p>
             <ul style={{ marginLeft: '2rem', marginTop: '0.5rem' }}>
-              <li><strong>6.666 PUSD:</strong> Fixed launch fee (collected by TokenFactory)</li>
+              <li><strong>1 PUSD:</strong> Fixed launch fee (burned by TokenFactory if not owner)</li>
               <li><strong>Launch Amount:</strong> Initial PUSD to seed the bonding curve (minimum 0.06 PUSD)</li>
               <li><strong>Collateral Lock:</strong> 10% of launch amount in PUSD locked for 30 days</li>
             </ul>
@@ -229,10 +229,10 @@ Price is always calculated on-chain for transparency.`}
               Example: If you launch with 100 PUSD:
             </p>
             <ul style={{ marginLeft: '2rem', marginTop: '0.5rem' }}>
-              <li>6.666 PUSD goes to launch fee</li>
+              <li>1 PUSD goes to launch fee</li>
               <li>100 PUSD goes to bonding curve</li>
               <li>10 PUSD (10% of 100) is locked as collateral for 30 days</li>
-              <li>Total required: 116.666 PUSD</li>
+              <li>Total required: 101 PUSD</li>
             </ul>
 
             <h4 style={{ color: '#00ccff', fontSize: '1rem', marginTop: '1rem', marginBottom: '0.5rem' }}>
@@ -304,7 +304,7 @@ Price is always calculated on-chain for transparency.`}
               <li>Token prices can be volatile due to bonding curve mechanics</li>
               <li>Early buyers may face higher prices as more tokens are sold</li>
               <li>Collateral (10% of launch amount) is locked for 30 days (no early withdrawal)</li>
-              <li>Launch fee (6.666 PUSD) is non-refundable</li>
+              <li>Launch fee (1 PUSD) is non-refundable</li>
               <li>Always do your own research (DYOR) before launching or trading</li>
               <li>Never invest more than you can afford to lose</li>
             </ul>

@@ -10,7 +10,7 @@ const faqData: FAQItem[] = [
   {
     category: 'Overview',
     question: 'What is PUSD?',
-    answer: 'PUSD (Polygon USD) is a decentralized stablecoin backed by Polygon (POL). It maintains a 1:1 ratio with USD through a collateralization mechanism using POL as collateral. The system ensures transparency and security through on-chain verification and real-time price feeds.'
+    answer: 'PUSD (Polygon USD) is a decentralized, over-collateralized stablecoin on the Polygon network, backed by POL collateral. It targets a $1 peg (not a custodial 1:1 fiat reserve) and emphasizes on-chain transparency, oracle-based pricing, and an independent, non-affiliated relationship with Polygon Labs.'
   },
   {
     category: 'Minting',
@@ -20,7 +20,7 @@ const faqData: FAQItem[] = [
   {
     category: 'Minting',
     question: 'What is the tokenomics of PUSD minting?',
-    answer: 'PUSD Minting Tokenomics: When you deposit POL, the USD value is split as follows: 60% → Minted as PUSD (sent to your wallet), 20% → Automatically staked as POL (in StakingPool with your chosen lock period), 20% → Automatically staked as PUSD (in StakingPool with your chosen lock period). Minimum lock period: 30 days (you can choose 30, 60, 120, or 365 days). The remaining POL (after staking portion) stays in the vault as collateral backing your minted PUSD. This design ensures over-collateralization, automatic staking rewards, and maintains the 1:1 USD peg through collateral backing.'
+    answer: 'PUSD Minting Tokenomics: When you deposit POL, the USD value is split as follows: 60% → Minted as PUSD (sent to your wallet), 20% → Automatically staked as POL, 20% → Automatically staked as PUSD (both with your chosen lock period: 30/60/120/365 days). The remaining POL (after staking portion) stays in the vault as collateral backing your minted PUSD. This design ensures over-collateralization and automatic rewards while targeting a $1 peg.'
   },
   {
     category: 'Staking',
@@ -95,7 +95,7 @@ const faqData: FAQItem[] = [
   {
     category: 'PFUN',
     question: 'How do I launch a token?',
-    answer: 'To launch a token, you need to provide token details (name, symbol, total supply), a launch amount in PUSD, and optionally social links (website, Telegram, Discord). There is a launch fee of 6.666 PUSD. Once launched, your token will appear in the "New" section and can be traded immediately.'
+    answer: 'To launch a token, provide token details (name, symbol, total supply), a launch amount in PUSD (minimum 0.06 PUSD), and optional social links. There is a fixed launch fee of 1 PUSD (burn). On launch, 10% of the launch amount is locked as collateral for 30 days. The token appears in the “New” section and can be traded immediately.'
   },
   {
     category: 'PFUN',
@@ -120,7 +120,7 @@ const faqData: FAQItem[] = [
   {
     category: 'PFUN',
     question: 'What is collateral locking?',
-    answer: 'When you launch a token, 10% of your launch amount (in PUSD) is automatically locked as collateral for 30 days. This collateral ensures commitment from creators and prevents malicious launches. After the 30-day lock period, you can claim back your locked PUSD using the unlockCollateral function. The collateral is separate from the launch fee (6.666 PUSD).'
+    answer: 'When you launch a token, 10% of the launch amount (in PUSD) is locked for 30 days to ensure commitment. After 30 days, it can be unlocked via the unlockCollateral function. This is separate from the 1 PUSD launch fee.'
   },
   {
     category: 'PFUN',
@@ -130,7 +130,7 @@ const faqData: FAQItem[] = [
   {
     category: 'PFUN',
     question: 'What happens to the launch fee?',
-    answer: 'The 6.666 PUSD launch fee is collected by the TokenFactory contract. The contract owner can withdraw these fees. This fee helps maintain the platform and prevents spam launches.'
+    answer: 'The launch fee is a fixed 1 PUSD, burned by the TokenFactory (if the launcher is not the owner). Purpose: limit spam launches and sustain the platform.'
   },
   {
     category: 'PFUN',
@@ -140,7 +140,7 @@ const faqData: FAQItem[] = [
   {
     category: 'PFUN',
     question: 'What is the minimum launch amount?',
-    answer: 'The minimum launch amount depends on the token parameters and bonding curve settings. Generally, you should launch with enough PUSD to ensure initial liquidity and price stability. Check the launch form for specific requirements.'
+    answer: 'Minimum launch amount is 0.06 PUSD (6e16) per the contract. It is recommended to provide more to ensure initial liquidity and price stability.'
   },
   {
     category: 'PFUN',
@@ -175,7 +175,7 @@ const faqData: FAQItem[] = [
   {
     category: 'PFUN',
     question: 'Can I launch multiple tokens?',
-    answer: 'Yes, you can launch multiple tokens. Each launch requires paying the launch fee (6.666 PUSD) and providing collateral. There is no limit on how many tokens you can launch, but each token must meet the minimum requirements.'
+    answer: 'Yes, you can launch multiple tokens. Each launch requires paying the launch fee (1 PUSD burn) and providing the launch amount with 10% collateral lock. There is no limit on how many tokens you can launch, but each token must meet the minimum requirements (min launch amount 0.06 PUSD).'
   },
   {
     category: 'PFUN',
@@ -324,7 +324,7 @@ export default function FAQ() {
           
           return (
             <div 
-              key={actualIndex} 
+              key={`${faq.category}-${faq.question}-${actualIndex}`} 
               className={`faq-item ${isOpen ? 'open' : ''}`}
             >
               <div 

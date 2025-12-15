@@ -12,7 +12,7 @@ const pfunFAQData: FAQItem[] = [
   },
   {
     question: 'How do I launch a token?',
-    answer: 'To launch a token, you need to provide token details (name, symbol, total supply), a launch amount in PUSD, and optionally social links (website, Telegram, Discord). There is a launch fee of 6.666 PUSD. Once launched, your token will appear in the "New" section and can be traded immediately.'
+    answer: 'To launch a token, provide token details (name, symbol, total supply), a launch amount in PUSD (minimum 0.06 PUSD), and optional socials. There is a fixed launch fee of 1 PUSD (burn). On launch, 10% of the launch amount is locked as collateral for 30 days. The token appears in the "New" section and can be traded immediately.'
   },
   {
     question: 'What is a bonding curve?',
@@ -32,7 +32,7 @@ const pfunFAQData: FAQItem[] = [
   },
   {
     question: 'What is collateral locking?',
-    answer: 'When you launch a token, 10% of your launch amount (in PUSD) is automatically locked as collateral for 30 days. This collateral ensures commitment from creators and prevents malicious launches. After the 30-day lock period, you can claim back your locked PUSD using the unlockCollateral function. The collateral is separate from the launch fee (6.666 PUSD).'
+    answer: 'When you launch a token, 10% of your launch amount (in PUSD) is automatically locked as collateral for 30 days. This collateral is separate from the 1 PUSD launch fee and can be unlocked after the lock period via unlockCollateral.'
   },
   {
     question: 'How does listing work?',
@@ -40,7 +40,7 @@ const pfunFAQData: FAQItem[] = [
   },
   {
     question: 'What happens to the launch fee?',
-    answer: 'The 6.666 PUSD launch fee is collected by the TokenFactory contract. The contract owner can withdraw these fees. This fee helps maintain the platform and prevents spam launches.'
+    answer: 'The launch fee is a fixed 1 PUSD, burned by the TokenFactory contract (if the launcher is not the owner). This discourages spam launches.'
   },
   {
     question: 'Can I change token details after launch?',
@@ -48,7 +48,7 @@ const pfunFAQData: FAQItem[] = [
   },
   {
     question: 'What is the minimum launch amount?',
-    answer: 'The minimum launch amount depends on the token parameters and bonding curve settings. Generally, you should launch with enough PUSD to ensure initial liquidity and price stability. Check the launch form for specific requirements.'
+    answer: 'Minimum launch amount per contract is 0.06 PUSD (6e16). Practically, you should add more to ensure initial liquidity and price stability.'
   },
   {
     question: 'How is token price calculated?',
@@ -76,7 +76,7 @@ const pfunFAQData: FAQItem[] = [
   },
   {
     question: 'Can I launch multiple tokens?',
-    answer: 'Yes, you can launch multiple tokens. Each launch requires paying the launch fee (6.666 PUSD) and providing collateral. There is no limit on how many tokens you can launch, but each token must meet the minimum requirements.'
+    answer: 'Yes. Each launch requires the 1 PUSD launch fee (burn) and the launch amount with 10% collateral lock. No limit on number of launches, but each must meet minimum requirements.'
   },
   {
     question: 'How do I get my token to the top?',
@@ -131,7 +131,7 @@ export default function PFUNFAQ() {
           
           return (
             <div 
-              key={index}
+              key={`${faq.question}-${index}`}
               style={{ 
                 border: '1px solid #333',
                 borderRadius: '4px',

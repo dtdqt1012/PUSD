@@ -15,7 +15,7 @@ interface ContentBlock {
 const introBlocks: ContentBlock[] = [
   {
     lines: [
-      { text: 'Initializing POLYGON USD...', type: 'info' },
+      { text: 'Initializing PUSD...', type: 'info' },
       { text: 'Connecting to Polygon network...', type: 'info' },
       { text: 'Loading contracts...', type: 'info' },
       { text: 'Connected to Polygon Mainnet', type: 'success' },
@@ -26,10 +26,10 @@ const introBlocks: ContentBlock[] = [
   {
     lines: [
       { text: '', type: 'command' },
-      { text: 'Welcome to POLYGON USD', type: 'output' },
+      { text: 'Welcome to PUSD', type: 'output' },
       { text: '', type: 'command' },
-      { text: 'Decentralized stablecoin backed by Polygon (POL)', type: 'output' },
-      { text: 'Maintains 1:1 ratio with USD through collateralization', type: 'output' },
+      { text: 'Decentralized, over-collateralized stablecoin on Polygon (backed by POL)', type: 'output' },
+      { text: 'Targets a $1 peg via POL collateral with on-chain transparency', type: 'output' },
     ],
     delay: 500
   },
