@@ -431,7 +431,7 @@ export default function BalanceCard() {
             </div>
           </div>
           <div className="balance-item">
-            <label>Your locked POL amount</label>
+            <label>POL locked</label>
             <div className="value">
               <TerminalNumber value={parseFloat(totalStaked).toFixed(4)} />
             </div>
