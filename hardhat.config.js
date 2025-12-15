@@ -39,7 +39,7 @@ module.exports = {
   },
   etherscan: {
     // Use Etherscan API v2 (single key for all networks)
-    apiKey: process.env.POLYGONSCAN_API_KEY || "5QD41NNKM7PBJQ6491V63DGPN3EWJBV2G2",
+    apiKey: process.env.POLYGONSCAN_API_KEY || "VUVI9NNAVSNZM55AP3Y5RU5PGBUPISE58C",
     
     customChains: [
       {

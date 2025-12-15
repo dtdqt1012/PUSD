@@ -42,6 +42,7 @@ function loadContractAddresses() {
     const deploymentInfo = JSON.parse(readFileSync(deploymentPath, 'utf8'));
     
     return {
+      PUSDToken: process.env.PUSD_TOKEN_ADDRESS || deploymentInfo.contracts?.pusdToken || '0xCDaAf6f8c59962c7807c62175E21487CB640d3b8',
       PUSDLottery: process.env.PUSDLOTTERY_ADDRESS || deploymentInfo.contracts?.pusdLottery || '0xCCc95e7279813Ee1e4073e39280171C44C12431B',
       OraclePriceFeed: process.env.ORACLE_ADDRESS || deploymentInfo.contracts?.oracle || '0x89c3a9E796dDdB0880bd1d0AC2293340D761AFA0',
       MintingVault: process.env.MINTING_VAULT_ADDRESS || deploymentInfo.contracts?.mintingVault || '0x0c164be11d68F766207735BbCE7B02878b04d21E',
@@ -52,6 +53,7 @@ function loadContractAddresses() {
     console.warn('Could not load deployment file, using default addresses:', error.message);
     // Fallback to default addresses
     return {
+      PUSDToken: process.env.PUSD_TOKEN_ADDRESS || '0xCDaAf6f8c59962c7807c62175E21487CB640d3b8',
       PUSDLottery: process.env.PUSDLOTTERY_ADDRESS || '0xCCc95e7279813Ee1e4073e39280171C44C12431B',
       OraclePriceFeed: process.env.ORACLE_ADDRESS || '0x89c3a9E796dDdB0880bd1d0AC2293340D761AFA0',
       MintingVault: process.env.MINTING_VAULT_ADDRESS || '0x0c164be11d68F766207735BbCE7B02878b04d21E',
@@ -65,6 +67,7 @@ const CONTRACTS = loadContractAddresses();
 
 // Log contract addresses on startup
 console.log('📋 Using contract addresses:');
+console.log('  PUSDToken:', CONTRACTS.PUSDToken);
 console.log('  PUSDLottery:', CONTRACTS.PUSDLottery);
 console.log('  OraclePriceFeed:', CONTRACTS.OraclePriceFeed);
 console.log('  MintingVault:', CONTRACTS.MintingVault);
@@ -84,15 +87,23 @@ if (CONTRACTS.PUSDLottery.toLowerCase() !== EXPECTED_LOTTERY_ADDRESS.toLowerCase
 // Load ABIs
 function loadABI(contractName) {
   try {
+    // Try artifacts first
     const abiPath = join(__dirname, '..', 'artifacts', 'contracts', `${contractName}.sol`, `${contractName}.json`);
     const artifact = JSON.parse(readFileSync(abiPath, 'utf8'));
     return artifact.abi;
   } catch (error) {
-    console.warn(`Could not load ABI for ${contractName}`);
-    return [];
+    // Fallback to frontend ABI
+    try {
+      const frontendAbiPath = join(__dirname, '..', 'frontend', 'src', 'abis', `${contractName}.json`);
+      return JSON.parse(readFileSync(frontendAbiPath, 'utf8'));
+    } catch (frontendError) {
+      console.warn(`Could not load ABI for ${contractName}`);
+      return [];
+    }
   }
 }
 
+const pusdTokenABI = loadABI('PUSDToken');
 const lotteryABI = loadABI('PUSDLottery');
 const oracleABI = loadABI('OraclePriceFeed');
 const vaultABI = loadABI('MintingVault');
@@ -872,6 +883,67 @@ app.post('/api/tvl/refresh', async (req, res) => {
   } catch (error) {
     console.error('Error refreshing TVL:', error);
     res.status(500).json({ error: 'Failed to refresh TVL', message: error.message });
+  }
+});
+
+// Total Supply endpoint for CoinMarketCap (returns ONLY numerical value)
+app.get('/api/supply/total', async (req, res) => {
+  const cacheKey = 'pusd-total-supply';
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    // Return as plain text (numerical value only)
+    res.setHeader('Content-Type', 'text/plain');
+    return res.send(cached.toString());
+  }
+
+  try {
+    const provider = createProvider();
+    const pusdContract = new ethers.Contract(CONTRACTS.PUSDToken, pusdTokenABI, provider);
+    
+    const totalSupply = await callWithRetry(() => pusdContract.totalSupply(), 2, 2000);
+    
+    // Cache for 5 minutes (300 seconds)
+    cache.set(cacheKey, totalSupply.toString(), 300);
+    
+    // Return as plain text (numerical value only) - CoinMarketCap format
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(totalSupply.toString());
+  } catch (error) {
+    console.error('Error fetching total supply:', error);
+    res.status(500).send('0');
+  }
+});
+
+// Circulating Supply endpoint for CoinMarketCap (returns ONLY numerical value)
+// For PUSD, circulating supply = total supply (no treasury, no pre-mined tokens)
+// Staked tokens are still considered circulating as they're in the market
+app.get('/api/supply/circulating', async (req, res) => {
+  const cacheKey = 'pusd-circulating-supply';
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    // Return as plain text (numerical value only)
+    res.setHeader('Content-Type', 'text/plain');
+    return res.send(cached.toString());
+  }
+
+  try {
+    const provider = createProvider();
+    const pusdContract = new ethers.Contract(CONTRACTS.PUSDToken, pusdTokenABI, provider);
+    
+    // For PUSD: Circulating Supply = Total Supply
+    // (No treasury locks, no pre-mined tokens, burned tokens already excluded from total supply)
+    const totalSupply = await callWithRetry(() => pusdContract.totalSupply(), 2, 2000);
+    const circulatingSupply = totalSupply; // Same as total supply for PUSD
+    
+    // Cache for 5 minutes (300 seconds)
+    cache.set(cacheKey, circulatingSupply.toString(), 300);
+    
+    // Return as plain text (numerical value only) - CoinMarketCap format
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(circulatingSupply.toString());
+  } catch (error) {
+    console.error('Error fetching circulating supply:', error);
+    res.status(500).send('0');
   }
 });
 

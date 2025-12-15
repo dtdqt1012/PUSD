@@ -17,8 +17,11 @@ export default function Home() {
             <span className="title-subtitle">Decentralized Stablecoin</span>
           </h1>
           <p className="hero-description">
-            Fully collateralized stablecoin backed by Polygon (POL), 
+            Fully collateralized stablecoin backed by Polygon (POL),
             delivering stability, transparency, and earning opportunities in the DeFi ecosystem.
+          </p>
+          <p className="hero-description" style={{ fontSize: '0.9rem', opacity: 0.8 }}>
+            Independent project on Polygon network; not affiliated with Polygon Labs.
           </p>
           <div className="hero-actions">
             <Link to="/app" className="btn-primary">

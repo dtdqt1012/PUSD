@@ -50,6 +50,9 @@ const FooterInfo = memo(function FooterInfo() {
       <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
         PUSD - Polygon's Native Stablecoin
       </div>
+      <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.35rem' }}>
+        Not affiliated with Polygon Labs; independently built on Polygon network.
+      </div>
     </footer>
   );
 });

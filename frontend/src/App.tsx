@@ -31,7 +31,7 @@ function Navigation() {
   return (
     <nav className="main-nav">
       <div className="nav-container">
-        <Link to="/" className="nav-logo" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Link to="/" className="nav-logo" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <img 
             src="/pusd-logo.png" 
             alt="PUSD Logo" 
@@ -44,7 +44,7 @@ function Navigation() {
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
-          <span className="terminal-prompt">&gt;</span> POLYGON USD
+                <span className="terminal-prompt">&gt;</span> PUSD · Polygon
         </Link>
         <div className="nav-links">
           <Link 
@@ -135,6 +135,9 @@ function Footer() {
       </div>
       <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
         PUSD - Polygon's Native Stablecoin
+      </div>
+      <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '0.35rem' }}>
+        Not affiliated with Polygon Labs; independently built on Polygon network.
       </div>
     </footer>
   );
